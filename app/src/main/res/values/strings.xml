@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">Discovery</string>
+    <string name="action_settings">Settings</string>
+    <string name="do_device_discovery">Discover devices</string>
+    <string name="cancel_device_discovery">Cancel discovery</string>
+    <string name="enable_bluetooth">Enable Bluetooth</string>
+    <string name="bluetooth_unsupported_device_message">Bluetooth is not supported on this device</string>
+    <string name="discovery_activity_default_title">Devices</string>
+    <string name="discovery_activity_discovering_message">Discovering...</string>
+    <string name="title_activity_device_interaction">Controls</string>
+    <string name="title_activity_interaction_settings">InteractionSettingsActivity</string>
+</resources>
