@@ -55,7 +55,20 @@ public abstract class RecyclerViewAdapterBase<T, VH extends RecyclerView.ViewHol
         return true;
     }
 
-    public boolean add(T item)
+    public boolean addLast(T item)
+    {
+        if (items.contains(item))
+        {
+            return false;
+        }
+
+        items.addLast(item);
+        refresh();
+
+        return true;
+    }
+
+    public boolean addFirst(T item)
     {
         if (items.contains(item))
         {

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="illegal_argument_exception_bluetooth_device_missing">A reference to a Bluetooth Device is missing.</string>
+    <string name="illegal_argument_exception_no_key_provided">The key is null or empty.</string>
+    <string name="illegal_argument_exception_no_object_reference_provided">There is no reference provided to the object</string>
+    <string name="illegal_argument_exception_key_instance_of_another_class">Object stored with key {%1$s} is an instance of another class</string>
+</resources>

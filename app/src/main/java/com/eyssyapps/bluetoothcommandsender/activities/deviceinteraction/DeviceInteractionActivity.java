@@ -1,7 +1,6 @@
 package com.eyssyapps.bluetoothcommandsender.activities.deviceinteraction;
 
 import android.app.ProgressDialog;
-import android.bluetooth.BluetoothDevice;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
@@ -27,6 +26,7 @@ import com.eyssyapps.bluetoothcommandsender.R;
 import com.eyssyapps.bluetoothcommandsender.enumerations.Coordinate;
 import com.eyssyapps.bluetoothcommandsender.protocol.Commands;
 import com.eyssyapps.bluetoothcommandsender.protocol.ServerCommands;
+import com.eyssyapps.bluetoothcommandsender.state.models.BluetoothDeviceLite;
 import com.eyssyapps.bluetoothcommandsender.threading.BluetoothConnectionThread;
 import com.eyssyapps.bluetoothcommandsender.utils.data.TextUtils;
 import com.eyssyapps.bluetoothcommandsender.utils.view.SystemMessagingUtils;
@@ -57,6 +57,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
     private Button leftClick, middleClick, rightClick;
 
     private BluetoothConnectionThread connectionThread;
+    private BluetoothDeviceLite targetDevice;
 
     private GestureDetectorCompat mDetector;
 
@@ -91,7 +92,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
         ViewUtils.setViewAndChildrenVisibility(findViewById(android.R.id.content), View.INVISIBLE);
         progressDialog.show();
 
-        BluetoothDevice targetDevice = getIntent().getExtras().getParcelable(DEVICE_KEY);
+        targetDevice = getIntent().getExtras().getParcelable(DEVICE_KEY);
 
         connectionThread = new BluetoothConnectionThread(SERVER_ENDPOINT, targetDevice, handler);
         connectionThread.start();
@@ -143,19 +144,14 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
         @Override
         public void handleMessage(Message msg)
         {
+            String data = new String((byte[])msg.obj);
+            data = data.trim();
+
             if (msg.what == BluetoothConnectionThread.MESSAGE_READ)
             {
-                String data = new String((byte[])msg.obj);
-                data = data.trim();
-
                 if (data.equals(ServerCommands.Close.toString()))
                 {
                     connectionThread.close();
-
-                    Intent intent = new Intent();
-                    setResult(RESULT_OK, intent);
-
-                    finish();
                 }
                 else
                 {
@@ -167,9 +163,6 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
             }
             else if (msg.what == BluetoothConnectionThread.MESSAGE_SENT)
             {
-                String data = new String((byte[])msg.obj);
-                data = data.trim();
-
                 eventsSent++;
 
                 String displayInfo = "MotionEvents: " + motionEvents + "\n" + "Events sent: "+ eventsSent;
@@ -178,24 +171,23 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
                 if (data.equals(Commands.END_SESSION.toString()))
                 {
                     connectionThread.close();
-
-                    setResult(RESULT_OK);
-
-                    finish();
                 }
+            }
+            else if (msg.what == BluetoothConnectionThread.MESSAGE_FAILED)
+            {
+                connectionThread.close();
             }
             else if (msg.what == BluetoothConnectionThread.THREAD_ABORTED)
             {
-                setResult(RESULT_OK);
+                Intent intent = new Intent();
+                intent.putExtra(DEVICE_KEY, targetDevice);
 
-                finish();
+                finish(RESULT_OK, intent);
             }
             else if (msg.what == BluetoothConnectionThread.CONNECTION_FAILED)
             {
                 Intent intent = new Intent();
-                setResult(RESULT_CANCELED, intent);
-
-                finish();
+                finish(RESULT_CANCELED, intent);
             }
             else if (msg.what == BluetoothConnectionThread.CONNECTION_ESTABLISHED)
             {
@@ -288,6 +280,13 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
         // TODO: ensure device can exit from activity even if the server is down
 
         sendPayload(Commands.END_SESSION.toString());
+    }
+
+    private void finish(int resultCode, Intent intent)
+    {
+        setResult(resultCode, intent);
+
+        finish();
     }
 
     private float increaseMouseMovement(float movingUnits, float sensitivity, Coordinate movingUnitsType)
@@ -386,40 +385,10 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
                     ":" +
                     (increaseMouseMovement(distances.getDistanceY(), MOUSE_SENSITIVITY, Coordinate.Y));
 
-            //        String acceleratedPayload =
-//            (increaseMouseMovement(increaseMovementByOneUnit(Coordinate.X, -distanceX), MOUSE_SENSITIVITY, Coordinate.X)) +
-//            ":" +
-//            (increaseMouseMovement(increaseMovementByOneUnit(Coordinate.Y, -distanceY), MOUSE_SENSITIVITY, Coordinate.Y));
-
-
-            //sendPayload(acceleratedPayload);
-
             sendPayload(payload);
         }
 
         return true;
-    }
-
-    private float increaseMovementByOneUnit(Coordinate coordinate, float unit)
-    {
-        if (coordinate == Coordinate.X)
-        {
-            if (unit > previousX)
-            {
-                return unit + 1;
-            }
-
-            return unit - 1;
-        }
-        else
-        {
-            if (unit > previousY)
-            {
-                return unit + 1;
-            }
-
-            return unit - 1;
-        }
     }
 
     @Override
@@ -492,7 +461,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
 
         public float getDistanceY()
         {
-            return distanceY;
+            return this.distanceY;
         }
 
         public void setDistanceY(float distanceY)
@@ -502,48 +471,50 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
             this.modified = true;
         }
 
-        public boolean isDistanceXPositiveChange()
+        private void roundX()
         {
-            return (this.distanceX >= 0 && this.distanceX >= 0.5);
+            // Windows only allows int's as inputs hence we need to make this a whole value
+
+            if (this.isDistanceXPositiveChange() && (this.distanceX >= 0.5 && this.distanceX <= 1.0))
+            {
+                this.setDistanceX(1.0f);
+            }
+            else if (this.distanceX <= -0.5 && this.distanceX >= -1.0)
+            {
+                this.setDistanceX(-1.0f);
+            }
         }
 
-        public boolean isDistanceXNegativeChange()
+        private void roundY()
         {
-            return (this.distanceX < 0  && this.distanceX <= -0.5);
+            // Windows only allows int's as inputs hence we need to make this a whole value
+
+            if (this.isDistanceYPositiveChange() && (this.distanceY >= 0.5 && this.distanceY <= 1.0))
+            {
+                this.setDistanceY(1.0f);
+            }
+            else if (this.distanceY <= -0.5 && this.distanceY >= -1.0)
+            {
+                this.setDistanceY(-1.0f);
+            }
+        }
+
+        public boolean isDistanceXPositiveChange()
+        {
+            return this.distanceX >= 0;
         }
 
         public boolean isDistanceYPositiveChange()
         {
-            return (this.distanceY >= 0 && this.distanceY >= 0.5);
-        }
-
-        public boolean isDistanceYNegativeChange()
-        {
-            return (this.distanceY < 0  && this.distanceY <= -0.5);
+            return this.distanceY >= 0;
         }
 
         public boolean shouldSend()
         {
-            // Windows only allows int's as inputs hence we need to make this a whole value
+            this.roundX();
+            this.roundY();
 
-            if (this.isDistanceXPositiveChange())
-            {
-                this.setDistanceX(1);
-            }
-            else if (this.isDistanceXNegativeChange())
-            {
-                this.setDistanceX(-1);
-            }
-            else if (this.isDistanceYPositiveChange())
-            {
-                this.setDistanceY(1);
-            }
-            else if (this.isDistanceYNegativeChange())
-            {
-                this.setDistanceY(-1);
-            }
-
-            return this.isModified();
+            return this.distanceX >= 1.0 || this.distanceX <= -1.0 || this.distanceY >= 1.0 || this.distanceY <= -1.0;
         }
     }
 }

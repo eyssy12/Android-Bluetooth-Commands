@@ -1,9 +1,10 @@
 package com.eyssyapps.bluetoothcommandsender.threading;
 
-import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.os.Handler;
 import android.os.Message;
+
+import com.eyssyapps.bluetoothcommandsender.state.models.BluetoothDeviceLite;
 
 import java.io.BufferedOutputStream;
 import java.io.DataOutputStream;
@@ -25,7 +26,7 @@ public class BluetoothConnectionThread extends Thread
 
     private final UUID serviceEndpoint;
     private final Handler handler;
-    private final BluetoothDevice targetDevice;
+    private final BluetoothDeviceLite targetDevice;
 
     private BluetoothSocket socket;
     private InputStream inputStream;
@@ -33,7 +34,7 @@ public class BluetoothConnectionThread extends Thread
 
     private BufferedOutputStream bufferedOutputStream;
 
-    public BluetoothConnectionThread(UUID serviceEndpoint, BluetoothDevice targetDevice, Handler handler)
+    public BluetoothConnectionThread(UUID serviceEndpoint, BluetoothDeviceLite targetDevice, Handler handler)
     {
         this.serviceEndpoint = serviceEndpoint;
         this.handler = handler;
@@ -64,7 +65,7 @@ public class BluetoothConnectionThread extends Thread
     {
         try
         {
-            socket = targetDevice.createRfcommSocketToServiceRecord(serviceEndpoint);
+            socket = targetDevice.createSocket(serviceEndpoint);
 
             if (connectionEnsured())
             {

@@ -4,8 +4,13 @@
       tools:context=".activities.MainActivity">
 
     <item
-        android:id="@+id/action_settings"
+        android:id="@+id/action_clear_bonded_devices"
         android:orderInCategory="100"
-        android:title="@string/action_settings"
+        android:title="@string/action_clear_bonded_devices"
+        app:showAsAction="never"/>
+    <item
+        android:id="@+id/action_clear_preferences"
+        android:orderInCategory="200"
+        android:title="@string/action_clear_preferences"
         app:showAsAction="never"/>
 </menu>
