@@ -201,10 +201,6 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
         switch (previousTab)
         {
             case MOUSE:
-//                MenuItem item;
-//                item = menu.findItem(R.id.action_interaction_settings);
-//                item.setActionView(R.layout.action_settings);
-//                item.getActionView().startAnimation(fadeOutAnimation);
             case KEYBOARD:
 
             case SYSTEM:
