@@ -382,24 +382,25 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
         finish();
     }
 
-
-
     private void sendPayload(String payload)
     {
-        byte[] bytes = TextUtils.getBytesForUtf8(payload, 64);
-
         // TODO: figure out the 'packet' sizes, header cannot consist of a single byte to indicate the data length - need 4-8 bytes for that
-//        byte[] payloadBytes = getBytesForCharset(payload, "UTF-8");
-//        byte[] bytes = new byte[payloadBytes.length + 1];
-//
-//        bytes[0] = String.valueOf(payloadBytes.length).getBytes()[0];
-//
-//        for (int i = 0; i < payloadBytes.length; i++)
-//        {
-//            bytes[i + 1] = payloadBytes[i];
-//        }
+        byte[] payloadBytes = TextUtils.getBytesForCharset(payload, TextUtils.CHARSET_UTF_8);
+        byte[] header;
 
-        connectionThread.write(bytes, 0, bytes.length);
+        if (payloadBytes.length <= 1024)
+        {
+            header = TextUtils.padBytes(TextUtils.getBytesForCharset(String.valueOf(payloadBytes.length), TextUtils.CHARSET_UTF_8), 4);
+
+        }
+        else
+        {
+            header = TextUtils.getBytesForCharset(String.valueOf(payloadBytes.length), TextUtils.CHARSET_UTF_8);
+        }
+
+        byte[] headerWithPayload = TextUtils.concat(header, payloadBytes);
+
+        connectionThread.write(headerWithPayload, 0, headerWithPayload.length);
     }
 
     @Override
@@ -429,14 +430,14 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
     @Override
     public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY)
     {
-        MotionDistance distances = new MotionDistance(-distanceX, -distanceY);
+        MotionDistance distances = new MotionDistance(-distanceX, -distanceY); // 2 decimal places
 
         if (distances.shouldSend())
         {
             String payload =
-                    (MotionDistance.increaseMouseMovement(distances.getDistanceX(), MOUSE_SENSITIVITY, Coordinate.X)) +
-                    ":" +
-                    (MotionDistance.increaseMouseMovement(distances.getDistanceY(), MOUSE_SENSITIVITY, Coordinate.Y));
+                (MotionDistance.increaseMouseMovement(distances.getDistanceX(), MOUSE_SENSITIVITY, Coordinate.X, 1)) +
+                ":" +
+                (MotionDistance.increaseMouseMovement(distances.getDistanceY(), MOUSE_SENSITIVITY, Coordinate.Y, 1));
 
             sendPayload(payload);
         }

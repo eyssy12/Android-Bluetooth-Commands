@@ -2,6 +2,8 @@ package com.eyssyapps.bluetoothcommandsender.state.models;
 
 import com.eyssyapps.bluetoothcommandsender.enumerations.Coordinate;
 
+import java.math.BigDecimal;
+
 /**
  * Created by eyssy on 26/08/2016.
  */
@@ -91,7 +93,7 @@ public class MotionDistance
         return this.distanceX >= 1.0 || this.distanceX <= -1.0 || this.distanceY >= 1.0 || this.distanceY <= -1.0;
     }
 
-    public static float increaseMouseMovement(float movingUnits, float sensitivity, Coordinate movingUnitsType)
+    public static float increaseMouseMovement(float movingUnits, float sensitivity, Coordinate movingUnitsType, int decimalPlace)
     {
         int min, max;
         if (movingUnitsType == Coordinate.X)
@@ -122,6 +124,8 @@ public class MotionDistance
         result = Math.max(min, result);
         result = Math.min(max, result);
 
-        return result;
+        return decimalPlace > 0
+            ? new BigDecimal(Float.toString(result)).setScale(decimalPlace, BigDecimal.ROUND_HALF_UP).floatValue()
+            : result;
     }
 }
