@@ -6,8 +6,9 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.support.design.widget.CoordinatorLayout;
+import android.support.v4.util.Pair;
 import android.support.v4.view.GestureDetectorCompat;
+import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
@@ -17,22 +18,30 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
-import android.widget.Button;
+import android.view.animation.AccelerateInterpolator;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.eyssyapps.bluetoothcommandsender.R;
+import com.eyssyapps.bluetoothcommandsender.custom.TabbedViewPager;
 import com.eyssyapps.bluetoothcommandsender.enumerations.Coordinate;
 import com.eyssyapps.bluetoothcommandsender.protocol.Commands;
 import com.eyssyapps.bluetoothcommandsender.protocol.ServerCommands;
+import com.eyssyapps.bluetoothcommandsender.state.InteractionTab;
 import com.eyssyapps.bluetoothcommandsender.state.models.BluetoothDeviceLite;
+import com.eyssyapps.bluetoothcommandsender.state.models.MotionDistance;
+import com.eyssyapps.bluetoothcommandsender.state.models.TabPageMetadata;
 import com.eyssyapps.bluetoothcommandsender.threading.BluetoothConnectionThread;
 import com.eyssyapps.bluetoothcommandsender.utils.data.TextUtils;
 import com.eyssyapps.bluetoothcommandsender.utils.view.SystemMessagingUtils;
 import com.eyssyapps.bluetoothcommandsender.utils.view.ViewUtils;
 import com.squareup.picasso.Picasso;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 public class DeviceInteractionActivity extends AppCompatActivity implements
@@ -49,21 +58,20 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
     private static final UUID SERVER_ENDPOINT = UUID.fromString("1f1aa577-32d6-4c59-b9a2-f262994783e9");
     private static float MOUSE_SENSITIVITY = DEFAULT_MOUSE_SENSITIVITY;
 
+    private View parentView;
     private Toolbar toolbar;
+    private TabbedViewPager tabbedViewPager;
+    private InteractionTab currentTab, previousTab;
 
+    private Animation fadeInAnimation, fadeOutAnimation;
     private ProgressDialog progressDialog;
     private TextView textView;
     private ImageView touchpadArea;
-    private Button leftClick, middleClick, rightClick;
 
     private BluetoothConnectionThread connectionThread;
     private BluetoothDeviceLite targetDevice;
 
     private GestureDetectorCompat mDetector;
-
-    private int motionEvents = 0, eventsSent = 0;
-
-    private float previousX, previousY;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -71,6 +79,36 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_device_interaction);
 
+        parentView = findViewById(android.R.id.content);
+
+        ViewUtils.setViewAndChildrenVisibility(parentView, View.INVISIBLE);
+
+        prepareStatics();
+
+        targetDevice = getIntent().getExtras().getParcelable(DEVICE_KEY);
+        mDetector = new GestureDetectorCompat(this, this);
+        mDetector.setOnDoubleTapListener(this);
+
+        prepareProgressDialog();
+        prepareTabbedView();
+
+        connectionThread = new BluetoothConnectionThread(SERVER_ENDPOINT, targetDevice, handler);
+        connectionThread.start();
+    }
+
+    private void prepareStatics()
+    {
+        fadeInAnimation = AnimationUtils.loadAnimation(this, android.R.anim.fade_in);
+        fadeInAnimation.setInterpolator(new AccelerateInterpolator());
+        fadeInAnimation.setDuration(150);
+
+        fadeOutAnimation = AnimationUtils.loadAnimation(this, android.R.anim.fade_out);
+        fadeOutAnimation.setInterpolator(new AccelerateInterpolator());
+        fadeOutAnimation.setDuration(150);
+    }
+    
+    private void prepareProgressDialog()
+    {
         progressDialog = new ProgressDialog(this);
         progressDialog.setMessage("Connecting to device...");
         progressDialog.setTitle("Operation in progress");
@@ -85,26 +123,92 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
                 finish();
             }
         });
-
-        mDetector = new GestureDetectorCompat(this, this);
-        mDetector.setOnDoubleTapListener(this);
-
-        ViewUtils.setViewAndChildrenVisibility(findViewById(android.R.id.content), View.INVISIBLE);
         progressDialog.show();
+    }
 
-        targetDevice = getIntent().getExtras().getParcelable(DEVICE_KEY);
+    private void prepareTabbedView()
+    {
+        Pair<Integer, Integer> viewPagerTabLayoutResIds = new Pair<>(
+            R.id.device_interaction_view_pager,
+            R.id.device_interaction_tabs);
+        
+        List<TabPageMetadata> inflatablePageMetadata = new ArrayList<>();
+        inflatablePageMetadata.add(new TabPageMetadata(InteractionTab.MOUSE, R.layout.content_device_interaction_mouse, R.drawable.ic_mouse_white_48dp));
+        inflatablePageMetadata.add(new TabPageMetadata(InteractionTab.KEYBOARD, R.layout.content_device_interaction_keyboard, R.drawable.ic_keyboard_white_48dp));
+        inflatablePageMetadata.add(new TabPageMetadata(InteractionTab.SYSTEM, R.layout.content_device_interaction_system, R.drawable.ic_assignment_white_48dp));
 
-        connectionThread = new BluetoothConnectionThread(SERVER_ENDPOINT, targetDevice, handler);
-        connectionThread.start();
+        ViewPager.OnPageChangeListener changeListener = new ViewPager.OnPageChangeListener()
+        {
+
+            @Override
+            public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels)
+            {
+                // TODO: could try and see if the pageScrolled is over 50% of the tab and then fade out any menu items
+            }
+
+            @Override
+            public void onPageSelected(int position)
+            {
+                previousTab = currentTab;
+                currentTab = InteractionTab.getEnumFromOrder(position);
+
+                invalidateOptionsMenu();
+            }
+
+            @Override
+            public void onPageScrollStateChanged(int state)
+            {
+
+            }
+        };
+
+        tabbedViewPager = new TabbedViewPager(this, parentView, changeListener, viewPagerTabLayoutResIds, inflatablePageMetadata);
+
+        currentTab = tabbedViewPager.getDefaultTab();
+        previousTab = InteractionTab.NOT_SET;
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu)
     {
         MenuInflater inflater = getMenuInflater();
-        inflater.inflate(R.menu.device_interaction_menu, menu);
+
+        fadeOutPreviousTab(menu);
+
+        switch (currentTab)
+        {
+            case MOUSE:
+
+                inflater.inflate(R.menu.device_interaction_mouse_menu, menu);
+
+                // TODO: figure out animations
+//                MenuItem item;
+//                item = menu.findItem(R.id.action_interaction_settings);
+//                item.setActionView(R.layout.action_settings);
+//                item.getActionView().startAnimation(fadeInAnimation);
+
+            case KEYBOARD:
+                inflater.inflate(R.menu.device_interaction_keyboard_menu, menu);
+            case SYSTEM:
+                inflater.inflate(R.menu.device_interaction_system_menu, menu);
+        }
 
         return true;
+    }
+
+    private void fadeOutPreviousTab(Menu menu)
+    {
+        switch (previousTab)
+        {
+            case MOUSE:
+//                MenuItem item;
+//                item = menu.findItem(R.id.action_interaction_settings);
+//                item.setActionView(R.layout.action_settings);
+//                item.getActionView().startAnimation(fadeOutAnimation);
+            case KEYBOARD:
+
+            case SYSTEM:
+        }
     }
 
     @Override
@@ -113,12 +217,14 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
         switch (item.getItemId())
         {
             case R.id.action_interaction_settings:
-                // handle
+
                 Intent intent = new Intent(this, InteractionSettingsActivity.class);
                 intent.putExtra(MOUSE_SENSITIVITY_KEY, MOUSE_SENSITIVITY);
                 startActivityForResult(intent, REQUEST_INTERACTION_SETTINGS);
+
                 return true;
             default:
+
                 return super.onOptionsItemSelected(item);
         }
     }
@@ -163,11 +269,6 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
             }
             else if (msg.what == BluetoothConnectionThread.MESSAGE_SENT)
             {
-                eventsSent++;
-
-                String displayInfo = "MotionEvents: " + motionEvents + "\n" + "Events sent: "+ eventsSent;
-                textView.setText(displayInfo);
-
                 if (data.equals(Commands.END_SESSION.toString()))
                 {
                     connectionThread.close();
@@ -197,89 +298,85 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
                 setSupportActionBar(toolbar);
                 getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
-                final CoordinatorLayout coordinatorLayout = (CoordinatorLayout) findViewById(R.id.coordinate_layout_device_interaction);
-                LinearLayout linearLayout = (LinearLayout) coordinatorLayout.findViewById(R.id.content_device_interaction);
-                textView = (TextView)linearLayout.findViewById(R.id.received_data_text);
-                touchpadArea = (ImageView) linearLayout.findViewById(R.id.touchpad_area);
-
-                LinearLayout btnControls = (LinearLayout)linearLayout.findViewById(R.id.btn_controls);
-                leftClick = (Button)btnControls.findViewById(R.id.left_click_button);
-                middleClick = (Button)btnControls.findViewById(R.id.middle_click_button);
-                rightClick = (Button)btnControls.findViewById(R.id.right_click_button);
-
-                touchpadArea.setEnabled(false);
-                leftClick.setEnabled(false);
-                middleClick.setEnabled(false);
-                rightClick.setEnabled(false);
-
-                Picasso.with(DeviceInteractionActivity.this).load(R.drawable.touchpad_surface).fit().into(
-                        touchpadArea,
-                        new com.squareup.picasso.Callback() {
-                            @Override
-                            public void onSuccess()
-                            {
-                                touchpadArea.setEnabled(true);
-                                leftClick.setEnabled(true);
-                                middleClick.setEnabled(true);
-                                rightClick.setEnabled(true);
-                            }
-
-                            @Override
-                            public void onError()
-                            {
-                                SystemMessagingUtils.showShortToast(DeviceInteractionActivity.this, "Error loading touch pad background");
-                            }
-                        });
-
-                leftClick.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v)
-                    {
-                        sendPayload(Commands.LEFT_CLICK.toString());
-                    }
-                });
-
-                middleClick.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v)
-                    {
-                        sendPayload(Commands.MIDDLE_CLICK.toString());
-                    }
-                });
-
-                rightClick.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v)
-                    {
-                        sendPayload(Commands.RIGHT_CLICK.toString());
-                    }
-                });
+                initialiseTabViews();
 
                 ViewUtils.setViewAndChildrenVisibility(findViewById(android.R.id.content), View.VISIBLE);
-
-                touchpadArea.setOnTouchListener(new View.OnTouchListener()
-                {
-                    @Override
-                    public boolean onTouch(View v, MotionEvent event)
-                    {
-                        return mDetector.onTouchEvent(event);
-                    }
-                });
-
-//                // temporary fix for components going off screen after being hidden or set as gone
-//                simulateTouchEventForView(touchpadArea);
             }
         }
     };
 
+    private void initialiseTabViews()
+    {
+        initialiseMouseInteractions();
+        initialiseKeyboardInteractions();
+        initialiseSystemInteractions();
+    }
+
+    private void initialiseMouseInteractions()
+    {
+        View mouseContainerView = tabbedViewPager.getTabbedAdapter().getViewByInteractionTab(InteractionTab.MOUSE);
+
+        LinearLayout linearLayout = (LinearLayout) mouseContainerView.findViewById(R.id.content_device_interaction_mouse);
+        textView = (TextView)linearLayout.findViewById(R.id.received_data_text);
+        touchpadArea = (ImageView) linearLayout.findViewById(R.id.touchpad_area);
+
+        touchpadArea.setEnabled(false);
+
+        Picasso.with(DeviceInteractionActivity.this)
+               .load(R.drawable.touchpad_surface)
+               .fit()
+               .into(touchpadArea, new com.squareup.picasso.Callback()
+               {
+                    @Override
+                    public void onSuccess()
+                    {
+                        touchpadArea.setEnabled(true);
+                    }
+
+                    @Override
+                    public void onError()
+                    {
+                        textView.setText("Error loading touch pad background");
+                        SystemMessagingUtils.showShortToast(DeviceInteractionActivity.this, "Error loading touch pad background");
+                    }
+                });
+
+        touchpadArea.setOnTouchListener(new View.OnTouchListener()
+        {
+            @Override
+            public boolean onTouch(View v, MotionEvent event)
+            {
+                return mDetector.onTouchEvent(event);
+            }
+        });
+
+        // temporary fix for components going off screen after being hidden or set as gone
+        // simulateTouchEventForView(touchpadArea);
+    }
+
+    private void initialiseKeyboardInteractions()
+    {
+        View keyboardContainerView = tabbedViewPager.getTabbedAdapter().getViewByInteractionTab(InteractionTab.KEYBOARD);
+    }
+
+    private void initialiseSystemInteractions()
+    {
+        View systemContainerView = tabbedViewPager.getTabbedAdapter().getViewByInteractionTab(InteractionTab.SYSTEM);
+    }
+
     @Override
     public void onBackPressed()
     {
-        // offer confirm dialog
+        if (currentTab != tabbedViewPager.getDefaultTab())
+        {
+            tabbedViewPager.setCurrentTab(tabbedViewPager.getDefaultTab());
+        }
+        else
+        {
+            // TODO: offer confirm dialog
 
-        // TODO: ensure device can exit from activity even if the server is down
-
-        sendPayload(Commands.END_SESSION.toString());
+            sendPayload(Commands.END_SESSION.toString());
+        }
     }
 
     private void finish(int resultCode, Intent intent)
@@ -289,39 +386,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
         finish();
     }
 
-    private float increaseMouseMovement(float movingUnits, float sensitivity, Coordinate movingUnitsType)
-    {
-        int min, max;
-        if (movingUnitsType == Coordinate.X)
-        {
-            max = 1920;
-            min = 0;
-            
-            if (movingUnits < 0)
-            {
-                max = 0;
-                min = -1920;
-            }
-        }
-        else 
-        {
-            max = 1080;
-            min = 0;
-            
-            if (movingUnits < 0)
-            {
-                max = 0;
-                min = -1080;
-            }
-        }
-        
-        float result = movingUnits * sensitivity;
 
-        result = Math.max(min, result);
-        result = Math.min(max, result);
-
-        return result;
-    }
 
     private void sendPayload(String payload)
     {
@@ -370,20 +435,12 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
     {
         MotionDistance distances = new MotionDistance(-distanceX, -distanceY);
 
-        motionEvents++;
-
-//        String displayInfo = "MotionEvents: " + motionEvents + "\n" + "Events sent: "+ eventsSent;
-//        touchpadArea.setText(displayInfo);
-
-        previousX = distanceX;
-        previousY = distanceY;
-
         if (distances.shouldSend())
         {
             String payload =
-                    (increaseMouseMovement(distances.getDistanceX(), MOUSE_SENSITIVITY, Coordinate.X)) +
+                    (MotionDistance.increaseMouseMovement(distances.getDistanceX(), MOUSE_SENSITIVITY, Coordinate.X)) +
                     ":" +
-                    (increaseMouseMovement(distances.getDistanceY(), MOUSE_SENSITIVITY, Coordinate.Y));
+                    (MotionDistance.increaseMouseMovement(distances.getDistanceY(), MOUSE_SENSITIVITY, Coordinate.Y));
 
             sendPayload(payload);
         }
@@ -429,92 +486,5 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
         sendPayload(Commands.LEFT_CLICK.toString());
 
         return true;
-    }
-
-    private class MotionDistance
-    {
-        private float distanceX, distanceY;
-        private boolean modified = false;
-
-        public MotionDistance(float distanceX, float distanceY)
-        {
-            this.distanceX = distanceX;
-            this.distanceY = distanceY;
-        }
-
-        public boolean isModified()
-        {
-            return this.modified;
-        }
-
-        public float getDistanceX()
-        {
-            return distanceX;
-        }
-
-        public void setDistanceX(float distanceX)
-        {
-            this.distanceX = distanceX;
-
-            this.modified = true;
-        }
-
-        public float getDistanceY()
-        {
-            return this.distanceY;
-        }
-
-        public void setDistanceY(float distanceY)
-        {
-            this.distanceY = distanceY;
-
-            this.modified = true;
-        }
-
-        private void roundX()
-        {
-            // Windows only allows int's as inputs hence we need to make this a whole value
-
-            if (this.isDistanceXPositiveChange() && (this.distanceX >= 0.5 && this.distanceX <= 1.0))
-            {
-                this.setDistanceX(1.0f);
-            }
-            else if (this.distanceX <= -0.5 && this.distanceX >= -1.0)
-            {
-                this.setDistanceX(-1.0f);
-            }
-        }
-
-        private void roundY()
-        {
-            // Windows only allows int's as inputs hence we need to make this a whole value
-
-            if (this.isDistanceYPositiveChange() && (this.distanceY >= 0.5 && this.distanceY <= 1.0))
-            {
-                this.setDistanceY(1.0f);
-            }
-            else if (this.distanceY <= -0.5 && this.distanceY >= -1.0)
-            {
-                this.setDistanceY(-1.0f);
-            }
-        }
-
-        public boolean isDistanceXPositiveChange()
-        {
-            return this.distanceX >= 0;
-        }
-
-        public boolean isDistanceYPositiveChange()
-        {
-            return this.distanceY >= 0;
-        }
-
-        public boolean shouldSend()
-        {
-            this.roundX();
-            this.roundY();
-
-            return this.distanceX >= 1.0 || this.distanceX <= -1.0 || this.distanceY >= 1.0 || this.distanceY <= -1.0;
-        }
     }
 }

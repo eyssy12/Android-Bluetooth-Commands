@@ -17,4 +17,17 @@
 
     <style name="AppTheme.PopupOverlay" parent="ThemeOverlay.AppCompat.Light"/>
 
+    <style name="SelectableItemTheme">
+        <item name="colorControlHighlight">@color/colorPrimary</item>
+    </style>
+
+    <style name="SelectableItemBackground">
+        <item name="android:background">?attr/selectableItemBackground</item>
+        <item name="android:theme">@style/SelectableItemTheme</item>
+    </style>
+
+    <!--<ripple xmlns:android="http://schemas.android.com/apk/res/android"-->
+            <!--android:color="?attr/colorControlHighlight">-->
+        <!--<item android:drawable="?attr/colorPrimary"/>-->
+    <!--</ripple>-->
 </resources>
