@@ -68,14 +68,12 @@ public class ViewUtils
 
     public static Drawable drawableFromUrl(String url) throws IOException
     {
-        Bitmap x;
-
         HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
         connection.connect();
         InputStream input = connection.getInputStream();
 
-        x = BitmapFactory.decodeStream(input);
-        return new BitmapDrawable(x);
+        Bitmap bitmap = BitmapFactory.decodeStream(input);
+        return new BitmapDrawable(bitmap);
     }
 
     public static void setViewAndChildrenVisibility(View view, int visibility)

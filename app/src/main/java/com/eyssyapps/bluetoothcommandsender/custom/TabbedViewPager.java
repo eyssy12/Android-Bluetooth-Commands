@@ -55,7 +55,9 @@ public class TabbedViewPager
 
         for (int i = 0; i < inflatablePageMetadata.size(); i++)
         {
-            tabLayout.getTabAt(i).setIcon(inflatablePageMetadata.get(i).getDrawableResId());
+            TabPageMetadata metadata = inflatablePageMetadata.get(i);
+
+            setTabIcon(metadata.getTab(), metadata.getDrawableResId());
         }
 
         setCurrentTab(defaultTab);

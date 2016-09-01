@@ -4,15 +4,10 @@ import android.app.ProgressDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
 import android.support.v4.util.Pair;
-import android.support.v4.view.GestureDetectorCompat;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.util.Log;
-import android.view.GestureDetector;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -22,20 +17,20 @@ import android.view.animation.AccelerateInterpolator;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.eyssyapps.bluetoothcommandsender.R;
 import com.eyssyapps.bluetoothcommandsender.custom.TabbedViewPager;
-import com.eyssyapps.bluetoothcommandsender.enumerations.Coordinate;
+import com.eyssyapps.bluetoothcommandsender.handlers.BluetoothGestureEventHandler;
+import com.eyssyapps.bluetoothcommandsender.handlers.BluetoothMessageHandler;
+import com.eyssyapps.bluetoothcommandsender.interfaces.OnBluetoothMessageListener;
 import com.eyssyapps.bluetoothcommandsender.protocol.Commands;
 import com.eyssyapps.bluetoothcommandsender.protocol.ServerCommands;
 import com.eyssyapps.bluetoothcommandsender.state.InteractionTab;
 import com.eyssyapps.bluetoothcommandsender.state.models.BluetoothDeviceLite;
-import com.eyssyapps.bluetoothcommandsender.state.models.MotionDistance;
 import com.eyssyapps.bluetoothcommandsender.state.models.TabPageMetadata;
 import com.eyssyapps.bluetoothcommandsender.threading.BluetoothConnectionThread;
-import com.eyssyapps.bluetoothcommandsender.utils.data.TextUtils;
+import com.eyssyapps.bluetoothcommandsender.utils.view.ActivityUtils;
 import com.eyssyapps.bluetoothcommandsender.utils.view.SystemMessagingUtils;
 import com.eyssyapps.bluetoothcommandsender.utils.view.ViewUtils;
 import com.squareup.picasso.Picasso;
@@ -45,16 +40,18 @@ import java.util.List;
 import java.util.UUID;
 
 public class DeviceInteractionActivity extends AppCompatActivity implements
-        GestureDetector.OnGestureListener,
-        GestureDetector.OnDoubleTapListener
+        OnBluetoothMessageListener
 {
     public static final String DEVICE_KEY = "device",
         MOUSE_SENSITIVITY_KEY = "mouse_sensitivity";
 
     public static final int REQUEST_INTERACTION_SETTINGS = 100;
-    private static final String DEBUG_TAG = "Gestures";
+
     private static final float DEFAULT_MOUSE_SENSITIVITY = (float)1.1;
 
+    // TODO: so far, this would only connect to one pc with this designated UUID/GUID
+    // if i'm going to allow for functionality to allow connection to other pc's,
+    // then i will need to implement something like a barcode scanner to get the string contents for the UUID of the server rather than a manual type-in operation for the user
     private static final UUID SERVER_ENDPOINT = UUID.fromString("1f1aa577-32d6-4c59-b9a2-f262994783e9");
     private static float MOUSE_SENSITIVITY = DEFAULT_MOUSE_SENSITIVITY;
 
@@ -70,8 +67,8 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
 
     private BluetoothConnectionThread connectionThread;
     private BluetoothDeviceLite targetDevice;
-
-    private GestureDetectorCompat mDetector;
+    private BluetoothMessageHandler messageHandler;
+    private BluetoothGestureEventHandler gestureHandler;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -83,17 +80,14 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
 
         ViewUtils.setViewAndChildrenVisibility(parentView, View.INVISIBLE);
 
-        prepareStatics();
-
         targetDevice = getIntent().getExtras().getParcelable(DEVICE_KEY);
-        mDetector = new GestureDetectorCompat(this, this);
-        mDetector.setOnDoubleTapListener(this);
 
+        prepareStatics();
         prepareProgressDialog();
         prepareTabbedView();
+        prepareBluetoothHandlers();
 
-        connectionThread = new BluetoothConnectionThread(SERVER_ENDPOINT, targetDevice, handler);
-        connectionThread.start();
+        gestureHandler.beginHandler();
     }
 
     private void prepareStatics()
@@ -110,7 +104,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
     private void prepareProgressDialog()
     {
         progressDialog = new ProgressDialog(this);
-        progressDialog.setMessage("Connecting to device...");
+        progressDialog.setMessage("Connecting to device..."); // TODO: strings.xml
         progressDialog.setTitle("Operation in progress");
         progressDialog.setIndeterminate(true);
         progressDialog.setCancelable(true);
@@ -152,7 +146,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
                 previousTab = currentTab;
                 currentTab = InteractionTab.getEnumFromOrder(position);
 
-                invalidateOptionsMenu();
+                invalidateOptionsMenu(); //calls onCreateOptionsMenu
             }
 
             @Override
@@ -168,6 +162,13 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
         previousTab = InteractionTab.NOT_SET;
     }
 
+    private void prepareBluetoothHandlers()
+    {
+        messageHandler = new BluetoothMessageHandler(this);
+        connectionThread = new BluetoothConnectionThread(SERVER_ENDPOINT, targetDevice, messageHandler);
+        gestureHandler = new BluetoothGestureEventHandler(this, connectionThread, MOUSE_SENSITIVITY);
+    }
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu)
     {
@@ -175,6 +176,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
 
         fadeOutPreviousTab(menu);
 
+        // perhaps cache the inflated menu to avoid re-inflating on view change
         switch (currentTab)
         {
             case MOUSE:
@@ -202,7 +204,6 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
         {
             case MOUSE:
             case KEYBOARD:
-
             case SYSTEM:
         }
     }
@@ -232,8 +233,9 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
         {
             if (resultCode == RESULT_OK)
             {
-                float newSensitivity = data.getFloatExtra(MOUSE_SENSITIVITY_KEY, DEFAULT_MOUSE_SENSITIVITY);
-                MOUSE_SENSITIVITY = newSensitivity;
+                MOUSE_SENSITIVITY = data.getFloatExtra(MOUSE_SENSITIVITY_KEY, DEFAULT_MOUSE_SENSITIVITY);
+
+                gestureHandler.setMouseSensitivity(MOUSE_SENSITIVITY);
             }
             if (resultCode == RESULT_CANCELED)
             {
@@ -241,65 +243,65 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
         }
     }
 
-    private final Handler handler = new Handler()
+    @Override
+    public void onMessageRead(String message)
     {
-        @Override
-        public void handleMessage(Message msg)
+        if (message.equals(ServerCommands.Close.toString()))
         {
-            String data = new String((byte[])msg.obj);
-            data = data.trim();
-
-            if (msg.what == BluetoothConnectionThread.MESSAGE_READ)
+            connectionThread.close();
+        }
+        else
+        {
+            if (!message.isEmpty())
             {
-                if (data.equals(ServerCommands.Close.toString()))
-                {
-                    connectionThread.close();
-                }
-                else
-                {
-                    if (!data.isEmpty())
-                    {
-                        textView.setText(data);
-                    }
-                }
-            }
-            else if (msg.what == BluetoothConnectionThread.MESSAGE_SENT)
-            {
-                if (data.equals(Commands.END_SESSION.toString()))
-                {
-                    connectionThread.close();
-                }
-            }
-            else if (msg.what == BluetoothConnectionThread.MESSAGE_FAILED)
-            {
-                connectionThread.close();
-            }
-            else if (msg.what == BluetoothConnectionThread.THREAD_ABORTED)
-            {
-                Intent intent = new Intent();
-                intent.putExtra(DEVICE_KEY, targetDevice);
-
-                finish(RESULT_OK, intent);
-            }
-            else if (msg.what == BluetoothConnectionThread.CONNECTION_FAILED)
-            {
-                Intent intent = new Intent();
-                finish(RESULT_CANCELED, intent);
-            }
-            else if (msg.what == BluetoothConnectionThread.CONNECTION_ESTABLISHED)
-            {
-                progressDialog.dismiss();
-
-                toolbar = (Toolbar) findViewById(R.id.toolbar);
-                setSupportActionBar(toolbar);
-                getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-
-                initialiseTabViews();
-
-                ViewUtils.setViewAndChildrenVisibility(findViewById(android.R.id.content), View.VISIBLE);
+                textView.setText(message);
             }
         }
-    };
+    }
+
+    @Override
+    public void onMessageSent(String message)
+    {
+        if (message.equals(Commands.END_SESSION.toString()))
+        {
+            connectionThread.close();
+        }
+    }
+
+    @Override
+    public void onMessageFailure(String message)
+    {
+        connectionThread.close();
+    }
+
+    @Override
+    public void onConnectionFailed()
+    {
+        ActivityUtils.finish(this, RESULT_CANCELED);
+    }
+
+    @Override
+    public void onConnectionEstablished()
+    {
+        progressDialog.dismiss();
+
+        toolbar = (Toolbar) findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+
+        initialiseTabViews();
+
+        ViewUtils.setViewAndChildrenVisibility(findViewById(android.R.id.content), View.VISIBLE);
+    }
+
+    @Override
+    public void onConnectionAborted()
+    {
+        Intent intent = new Intent();
+        intent.putExtra(DEVICE_KEY, targetDevice);
+
+        ActivityUtils.finish(this, RESULT_OK, intent);
+    }
 
     private void initialiseTabViews()
     {
@@ -312,7 +314,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
     {
         View mouseContainerView = tabbedViewPager.getTabbedAdapter().getViewByInteractionTab(InteractionTab.MOUSE);
 
-        LinearLayout linearLayout = (LinearLayout) mouseContainerView.findViewById(R.id.content_device_interaction_mouse);
+        View linearLayout = mouseContainerView.findViewById(R.id.content_device_interaction_mouse);
         textView = (TextView)linearLayout.findViewById(R.id.received_data_text);
         touchpadArea = (ImageView) linearLayout.findViewById(R.id.touchpad_area);
 
@@ -332,7 +334,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
                     @Override
                     public void onError()
                     {
-                        textView.setText("Error loading touch pad background");
+                        textView.setText("Error loading touch pad background"); // TODO: strings.xml
                         SystemMessagingUtils.showShortToast(DeviceInteractionActivity.this, "Error loading touch pad background");
                     }
                 });
@@ -342,12 +344,9 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
             @Override
             public boolean onTouch(View v, MotionEvent event)
             {
-                return mDetector.onTouchEvent(event);
+                return gestureHandler.onTouchEvent(event);
             }
         });
-
-        // temporary fix for components going off screen after being hidden or set as gone
-        // simulateTouchEventForView(touchpadArea);
     }
 
     private void initialiseKeyboardInteractions()
@@ -371,117 +370,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
         {
             // TODO: offer confirm dialog
 
-            sendPayload(Commands.END_SESSION.toString());
+            connectionThread.write(Commands.END_SESSION.toString());
         }
-    }
-
-    private void finish(int resultCode, Intent intent)
-    {
-        setResult(resultCode, intent);
-
-        finish();
-    }
-
-    private void sendPayload(String payload)
-    {
-        // TODO: figure out the 'packet' sizes, header cannot consist of a single byte to indicate the data length - need 4-8 bytes for that
-        byte[] payloadBytes = TextUtils.getBytesForCharset(payload, TextUtils.CHARSET_UTF_8);
-        byte[] header;
-
-        if (payloadBytes.length <= 1024)
-        {
-            header = TextUtils.padBytes(TextUtils.getBytesForCharset(String.valueOf(payloadBytes.length), TextUtils.CHARSET_UTF_8), 4);
-
-        }
-        else
-        {
-            header = TextUtils.getBytesForCharset(String.valueOf(payloadBytes.length), TextUtils.CHARSET_UTF_8);
-        }
-
-        byte[] headerWithPayload = TextUtils.concat(header, payloadBytes);
-
-        connectionThread.write(headerWithPayload, 0, headerWithPayload.length);
-    }
-
-    @Override
-    public boolean onDown(MotionEvent event)
-    {
-        Log.d(DEBUG_TAG,"onDown: " + event.toString());
-
-        return true;
-    }
-
-    @Override
-    public boolean onFling(MotionEvent event1, MotionEvent event2,
-                           float velocityX, float velocityY)
-    {
-        Log.d(DEBUG_TAG, "onFling: " + event1.toString()+event2.toString());
-
-        return true;
-    }
-
-    @Override
-    public void onLongPress(MotionEvent event)
-    {
-        Log.d(DEBUG_TAG, "onLongPress: " + event.toString());
-        sendPayload(Commands.RIGHT_CLICK.toString());
-    }
-
-    @Override
-    public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY)
-    {
-        MotionDistance distances = new MotionDistance(-distanceX, -distanceY); // 2 decimal places
-
-        if (distances.shouldSend())
-        {
-            String payload =
-                (MotionDistance.increaseMouseMovement(distances.getDistanceX(), MOUSE_SENSITIVITY, Coordinate.X, 1)) +
-                ":" +
-                (MotionDistance.increaseMouseMovement(distances.getDistanceY(), MOUSE_SENSITIVITY, Coordinate.Y, 1));
-
-            sendPayload(payload);
-        }
-
-        return true;
-    }
-
-    @Override
-    public void onShowPress(MotionEvent event)
-    {
-        Log.d(DEBUG_TAG, "onShowPress: " + event.toString());
-    }
-
-    @Override
-    public boolean onSingleTapUp(MotionEvent event)
-    {
-        Log.d(DEBUG_TAG, "onSingleTapUp: " + event.toString());
-
-        return true;
-    }
-
-    @Override
-    public boolean onDoubleTap(MotionEvent event)
-    {
-        Log.d(DEBUG_TAG, "onDoubleTap: " + event.toString());
-        sendPayload(Commands.DOUBLE_TAP.toString());
-
-        return true;
-    }
-
-    @Override
-    public boolean onDoubleTapEvent(MotionEvent event)
-    {
-        Log.d(DEBUG_TAG, "onDoubleTapEvent: " + event.toString());
-
-        return true;
-    }
-
-    @Override
-    public boolean onSingleTapConfirmed(MotionEvent event)
-    {
-        Log.d(DEBUG_TAG, "onSingleTapConfirmed: " + event.toString());
-        sendPayload(Commands.LEFT_CLICK.toString());
-
-        return true;
     }
 }

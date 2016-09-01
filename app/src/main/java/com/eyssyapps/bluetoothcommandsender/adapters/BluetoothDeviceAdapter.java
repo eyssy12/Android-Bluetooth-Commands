@@ -26,7 +26,7 @@ public class BluetoothDeviceAdapter extends RecyclerViewAdapterBase<BluetoothDev
         LEFT_ARROW = " -> ",
         UNPAIR_DEVICE_TAG = THIS_CLASS_NAME + LEFT_ARROW + "DevUnpair";
 
-    private static final String[] ITEMS = new String[] { "Connect", "Unpair", "Remove" };
+    private static final String[] ITEMS = new String[] { "Connect", "Remove from list", "Unpair" };
 
     public BluetoothDeviceAdapter(Context context, View parentView)
     {
@@ -73,7 +73,7 @@ public class BluetoothDeviceAdapter extends RecyclerViewAdapterBase<BluetoothDev
 
                                 activityFromContext.startActivityForResult(intent, MainActivity.REQUEST_START_DEVICE_INTERACTION);
                             }
-                            else if (which == 1)
+                            else if (which == 2)
                             {
                                 try
                                 {
@@ -88,7 +88,7 @@ public class BluetoothDeviceAdapter extends RecyclerViewAdapterBase<BluetoothDev
                                     Log.e(UNPAIR_DEVICE_TAG, e.getMessage());
                                 }
                             }
-                            else if (which == 2)
+                            else if (which == 1)
                             {
                                 dialog.dismiss();
                                 remove(item);

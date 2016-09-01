@@ -4,9 +4,11 @@ import android.bluetooth.BluetoothSocket;
 import android.os.Handler;
 import android.os.Message;
 
+import com.eyssyapps.bluetoothcommandsender.enumerations.ConnectionState;
 import com.eyssyapps.bluetoothcommandsender.state.models.BluetoothDeviceLite;
+import com.eyssyapps.bluetoothcommandsender.utils.data.CollectionUtils;
+import com.eyssyapps.bluetoothcommandsender.utils.data.TextUtils;
 
-import java.io.BufferedOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -18,8 +20,8 @@ import java.util.UUID;
 public class BluetoothConnectionThread extends Thread
 {
     public static final int MESSAGE_READ = 100,
-        THREAD_ABORTED = MESSAGE_READ + 1,
-        CONNECTION_ESTABLISHED = THREAD_ABORTED + 1,
+        CONNECTION_ABORTED = MESSAGE_READ + 1,
+        CONNECTION_ESTABLISHED = CONNECTION_ABORTED + 1,
         CONNECTION_FAILED = CONNECTION_ESTABLISHED + 1,
         MESSAGE_SENT = CONNECTION_FAILED + 1,
         MESSAGE_FAILED = MESSAGE_SENT + 1;
@@ -32,13 +34,15 @@ public class BluetoothConnectionThread extends Thread
     private InputStream inputStream;
     private DataOutputStream writer;
 
-    private BufferedOutputStream bufferedOutputStream;
+    private ConnectionState connectionState;
 
     public BluetoothConnectionThread(UUID serviceEndpoint, BluetoothDeviceLite targetDevice, Handler handler)
     {
         this.serviceEndpoint = serviceEndpoint;
         this.handler = handler;
         this.targetDevice = targetDevice;
+
+        this.connectionState = ConnectionState.NOT_STARTED;
     }
 
     public Handler getThreadHandler()
@@ -60,7 +64,6 @@ public class BluetoothConnectionThread extends Thread
         }
     }
 
-
     public void run()
     {
         try
@@ -69,6 +72,8 @@ public class BluetoothConnectionThread extends Thread
 
             if (connectionEnsured())
             {
+                connectionState = ConnectionState.CONNECTED;
+
                 inputStream = socket.getInputStream();
                 writer = new DataOutputStream(socket.getOutputStream());
                 // bufferedOutputStream = new BufferedOutputStream(socket.getOutputStream());
@@ -110,29 +115,23 @@ public class BluetoothConnectionThread extends Thread
         }
     }
 
-    public void write(String data)
+    public void write(String payload)
     {
-        try
-        {
-            writer.writeUTF(data);
-        }
-        catch (IOException e)
-        {
-            e.printStackTrace();
-        }
-    }
+        byte[] payloadBytes = TextUtils.getBytesForCharset(payload, TextUtils.CHARSET_UTF_8);
+        byte[] header;
 
-    public void write(byte[] data)
-    {
-        try
+        if (payloadBytes.length <= 1024)
         {
-            bufferedOutputStream.write(data);
-            bufferedOutputStream.flush();
+            header = CollectionUtils.padBytes(TextUtils.getBytesForCharset(String.valueOf(payloadBytes.length), TextUtils.CHARSET_UTF_8), 4);
         }
-        catch (IOException e)
+        else
         {
-            e.printStackTrace();
+            header = TextUtils.getBytesForCharset(String.valueOf(payloadBytes.length), TextUtils.CHARSET_UTF_8);
         }
+
+        byte[] headerWithPayload = CollectionUtils.concat(header, payloadBytes);
+
+        this.write(headerWithPayload, 0, headerWithPayload.length);
     }
 
     public void write(byte[] buffer, int offset, int count)
@@ -147,7 +146,7 @@ public class BluetoothConnectionThread extends Thread
         }
         catch (IOException e)
         {
-            // broken stream/pipe
+            // broken stream/pipe -> most likely that the server initiated a close from its end
 
             sendHandlerMessage(MESSAGE_FAILED, 0, -1, new byte[]{});
         }
@@ -167,10 +166,13 @@ public class BluetoothConnectionThread extends Thread
             this.closeOutputStream();
             socket.close();
 
-            sendHandlerMessage(THREAD_ABORTED, 0, -1, new byte[]{});
+            sendHandlerMessage(CONNECTION_ABORTED, 0, -1, new byte[]{});
+
+            connectionState = ConnectionState.DISCONNECTED;
         }
         catch (IOException e)
         {
+            connectionState = ConnectionState.DISCONNECTED;
         }
     }
 
@@ -195,5 +197,10 @@ public class BluetoothConnectionThread extends Thread
         {
             e.printStackTrace();
         }
+    }
+
+    public ConnectionState getConnectionState()
+    {
+        return connectionState;
     }
 }

@@ -19,7 +19,7 @@ public abstract class RecyclerViewAdapterBase<T, VH extends RecyclerView.ViewHol
     protected final View parentView;
 
     protected int selectedPosition = -1;
-    protected Object mutex;
+    protected final Object mutex;
 
     protected RecyclerViewAdapterBase(Context context, View parentView)
     {
@@ -111,22 +111,6 @@ public abstract class RecyclerViewAdapterBase<T, VH extends RecyclerView.ViewHol
         addCollection(collection, immediateRefresh);
     }
 
-    public void replaceCollection(List<T> newCollection, boolean immediateRefresh)
-    {
-        synchronized (mutex)
-        {
-            if (!newCollection.isEmpty())
-            {
-                items = new LinkedList<>(newCollection);
-            }
-        }
-
-        if (immediateRefresh)
-        {
-            refresh();
-        }
-    }
-
     public void addCollection(List<T> collection, boolean immediateRefresh)
     {
         synchronized (mutex)
@@ -137,6 +121,22 @@ public abstract class RecyclerViewAdapterBase<T, VH extends RecyclerView.ViewHol
                 {
                     items.addFirst(item);
                 }
+            }
+        }
+
+        if (immediateRefresh)
+        {
+            refresh();
+        }
+    }
+
+    public void replaceCollection(List<T> newCollection, boolean immediateRefresh)
+    {
+        synchronized (mutex)
+        {
+            if (!newCollection.isEmpty())
+            {
+                items = new LinkedList<>(newCollection);
             }
         }
 
