@@ -134,18 +134,24 @@ public class MainActivity extends AppCompatActivity
         }
         else
         {
-            // Register the BroadcastReceiver
-            IntentFilter filter = new IntentFilter();
-            filter.addAction(BluetoothDevice.ACTION_FOUND);
-            filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
-            filter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
-            registerReceiver(mReceiver, filter); // Don't forget to unregister during onDestroy
+            registerReceiver(broadcastReceiver, getBluetoothIntentFilter()); // Don't forget to unregister during onDestroy
 
             if (!bluetoothAdapter.isEnabled())
             {
                 btnDiscover.setText(resources.getString(R.string.enable_bluetooth));
             }
         }
+    }
+
+    private IntentFilter getBluetoothIntentFilter()
+    {
+        // Register the BroadcastReceiver
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(BluetoothDevice.ACTION_FOUND);
+        filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
+        filter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
+
+        return filter;
     }
 
     private void prepareAdapter()
@@ -209,6 +215,22 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
+    public void onPause()
+    {
+        unregisterReceiver(broadcastReceiver);
+
+        super.onPause();
+    }
+
+    @Override
+    public void onResume()
+    {
+        super.onResume();
+
+        registerReceiver(broadcastReceiver, getBluetoothIntentFilter());
+    }
+
+    @Override
     public boolean onCreateOptionsMenu(Menu menu)
     {
         MenuInflater inflater = getMenuInflater();
@@ -242,8 +264,7 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-    // TODO: register/unregister receiver in onPause/onResume
-    private final BroadcastReceiver mReceiver = new BroadcastReceiver()
+    private final BroadcastReceiver broadcastReceiver = new BroadcastReceiver()
     {
         public void onReceive(Context context, Intent intent)
         {

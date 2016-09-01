@@ -77,6 +77,11 @@ public class ViewUtils
         return new BitmapDrawable(bitmap);
     }
 
+    public static void setViewAndChildrenVisibility(View view, int visibility)
+    {
+        ViewUtils.setViewAndChildrenVisibility(view, visibility, null);
+    }
+
     public static void setViewAndChildrenVisibility(View view, int visibility, Animation animation)
     {
         if (animation != null)
@@ -95,11 +100,6 @@ public class ViewUtils
                 setViewAndChildrenVisibility(child, visibility);
             }
         }
-    }
-
-    public static void setViewAndChildrenVisibility(View view, int visibility)
-    {
-        ViewUtils.setViewAndChildrenVisibility(view, visibility, null);
     }
 
     public static void simulateTouchEventForView(View view)
