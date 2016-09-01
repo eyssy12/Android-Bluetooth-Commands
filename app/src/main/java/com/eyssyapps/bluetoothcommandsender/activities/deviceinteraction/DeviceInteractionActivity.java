@@ -30,6 +30,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.eyssyapps.bluetoothcommandsender.R;
 import com.eyssyapps.bluetoothcommandsender.custom.TabbedViewPager;
@@ -42,6 +43,7 @@ import com.eyssyapps.bluetoothcommandsender.state.InteractionTab;
 import com.eyssyapps.bluetoothcommandsender.state.models.BluetoothDeviceLite;
 import com.eyssyapps.bluetoothcommandsender.state.models.TabPageMetadata;
 import com.eyssyapps.bluetoothcommandsender.threading.BluetoothConnectionThread;
+import com.eyssyapps.bluetoothcommandsender.utils.threading.RunnableUtils;
 import com.eyssyapps.bluetoothcommandsender.utils.view.ActivityUtils;
 import com.eyssyapps.bluetoothcommandsender.utils.view.SystemMessagingUtils;
 import com.eyssyapps.bluetoothcommandsender.utils.view.ViewUtils;
@@ -69,6 +71,8 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
 
     private int keyboardInteractionViewId;
     private boolean keyboardInteractionInitiated = false;
+
+    private boolean doubleBackToExitPressedOnce = false;
 
     private View parentView;
     private AppBarLayout appBarLayout;
@@ -161,6 +165,8 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
             {
                 previousTab = currentTab;
                 currentTab = InteractionTab.getEnumFromOrder(position);
+
+                doubleBackToExitPressedOnce = false;
 
                 invalidateOptionsMenu(); //calls onCreateOptionsMenu
             }
@@ -468,9 +474,22 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
         }
         else
         {
-            // TODO: offer confirm dialog
+            if (doubleBackToExitPressedOnce)
+            {
+                connectionThread.write(Commands.END_SESSION.toString());
+            }
 
-            connectionThread.write(Commands.END_SESSION.toString());
+            this.doubleBackToExitPressedOnce = true;
+            SystemMessagingUtils.showToast(this, "Please click BACK again to exit", Toast.LENGTH_SHORT);
+
+            RunnableUtils.ExecuteWithDelay(new Runnable()
+            {
+                @Override
+                public void run()
+                {
+                    doubleBackToExitPressedOnce = false;
+                }
+            }, 2000);
         }
     }
 }
