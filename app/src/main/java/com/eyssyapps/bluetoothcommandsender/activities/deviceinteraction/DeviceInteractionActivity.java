@@ -1,22 +1,34 @@
 package com.eyssyapps.bluetoothcommandsender.activities.deviceinteraction;
 
 import android.app.ProgressDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
+import android.support.design.widget.AppBarLayout;
 import android.support.v4.util.Pair;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.animation.AccelerateInterpolator;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
+import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import com.eyssyapps.bluetoothcommandsender.R;
@@ -55,7 +67,11 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
     private static final UUID SERVER_ENDPOINT = UUID.fromString("1f1aa577-32d6-4c59-b9a2-f262994783e9");
     private static float MOUSE_SENSITIVITY = DEFAULT_MOUSE_SENSITIVITY;
 
+    private int keyboardInteractionViewId;
+    private boolean keyboardInteractionInitiated = false;
+
     private View parentView;
+    private AppBarLayout appBarLayout;
     private Toolbar toolbar;
     private TabbedViewPager tabbedViewPager;
     private InteractionTab currentTab, previousTab;
@@ -94,11 +110,11 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
     {
         fadeInAnimation = AnimationUtils.loadAnimation(this, android.R.anim.fade_in);
         fadeInAnimation.setInterpolator(new AccelerateInterpolator());
-        fadeInAnimation.setDuration(150);
+        fadeInAnimation.setDuration(300);
 
         fadeOutAnimation = AnimationUtils.loadAnimation(this, android.R.anim.fade_out);
         fadeOutAnimation.setInterpolator(new AccelerateInterpolator());
-        fadeOutAnimation.setDuration(150);
+        fadeOutAnimation.setDuration(300);
     }
     
     private void prepareProgressDialog()
@@ -128,7 +144,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
         
         List<TabPageMetadata> inflatablePageMetadata = new ArrayList<>();
         inflatablePageMetadata.add(new TabPageMetadata(InteractionTab.MOUSE, R.layout.content_device_interaction_mouse, R.drawable.ic_mouse_white_48dp));
-        inflatablePageMetadata.add(new TabPageMetadata(InteractionTab.KEYBOARD, R.layout.content_device_interaction_keyboard, R.drawable.ic_keyboard_white_48dp));
+        //inflatablePageMetadata.add(new TabPageMetadata(InteractionTab.KEYBOARD, R.layout.content_device_interaction_keyboard, R.drawable.ic_keyboard_white_48dp));
         inflatablePageMetadata.add(new TabPageMetadata(InteractionTab.SYSTEM, R.layout.content_device_interaction_system, R.drawable.ic_assignment_white_48dp));
 
         ViewPager.OnPageChangeListener changeListener = new ViewPager.OnPageChangeListener()
@@ -285,13 +301,14 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
     {
         progressDialog.dismiss();
 
+        appBarLayout = (AppBarLayout) findViewById(R.id.app_bar_layout);
         toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
         initialiseTabViews();
 
-        ViewUtils.setViewAndChildrenVisibility(findViewById(android.R.id.content), View.VISIBLE);
+        ViewUtils.setViewAndChildrenVisibility(parentView, View.VISIBLE);
     }
 
     @Override
@@ -306,19 +323,102 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
     private void initialiseTabViews()
     {
         initialiseMouseInteractions();
-        initialiseKeyboardInteractions();
+        //initialiseKeyboardInteractions();
         initialiseSystemInteractions();
     }
 
     private void initialiseMouseInteractions()
     {
-        View mouseContainerView = tabbedViewPager.getTabbedAdapter().getViewByInteractionTab(InteractionTab.MOUSE);
+        final RelativeLayout mouseContainerView = (RelativeLayout) tabbedViewPager.getTabbedAdapter().getViewByInteractionTab(InteractionTab.MOUSE);
+        final View mouseInteractionContainer = mouseContainerView.findViewById(R.id.mouse_interaction_container);
+        final View keyboardInteractionInitiatorContainer = mouseContainerView.findViewById(R.id.keyboard_interaction_initiator_container);
+        final LinearLayout keyboardInteractionContainer = (LinearLayout) mouseContainerView.findViewById(R.id.keyboard_interaction_container);
 
-        View linearLayout = mouseContainerView.findViewById(R.id.content_device_interaction_mouse);
-        textView = (TextView)linearLayout.findViewById(R.id.received_data_text);
-        touchpadArea = (ImageView) linearLayout.findViewById(R.id.touchpad_area);
-
+        textView = (TextView)mouseInteractionContainer.findViewById(R.id.received_data_text);
+        touchpadArea = (ImageView) mouseInteractionContainer.findViewById(R.id.touchpad_area);
         touchpadArea.setEnabled(false);
+
+        final ImageButton keyboardBtn = (ImageButton) keyboardInteractionInitiatorContainer.findViewById(R.id.keyboard_image_btn);
+
+        keyboardBtn.setOnClickListener(new View.OnClickListener()
+        {
+            @Override
+            public void onClick(View v)
+            {
+                // hide all the current views
+                ViewUtils.setViewAndChildrenVisibility(appBarLayout, View.GONE, fadeOutAnimation);
+                ViewUtils.setViewAndChildrenVisibility(mouseInteractionContainer, View.GONE, fadeOutAnimation);
+                ViewUtils.setViewAndChildrenVisibility(keyboardInteractionInitiatorContainer, View.GONE, fadeOutAnimation);
+
+                EditText keyboardTextView;
+                if (keyboardInteractionInitiated)
+                {
+                    keyboardTextView = (EditText)keyboardInteractionContainer.findViewById(keyboardInteractionViewId);
+                }
+                else
+                {
+                    keyboardTextView = new EditText(DeviceInteractionActivity.this)
+                    {
+                        @Override
+                        public boolean onKeyPreIme(int keyCode, KeyEvent event)
+                        {
+                            if (event.getKeyCode() == KeyEvent.KEYCODE_BACK)
+                            {
+                                this.setText("");
+
+                                ViewUtils.setViewAndChildrenVisibility(appBarLayout, View.VISIBLE, fadeInAnimation);
+                                ViewUtils.setViewAndChildrenVisibility(mouseInteractionContainer, View.VISIBLE, fadeInAnimation);
+                                ViewUtils.setViewAndChildrenVisibility(keyboardInteractionInitiatorContainer, View.VISIBLE, fadeInAnimation);
+
+                                ViewUtils.setViewAndChildrenVisibility(keyboardInteractionContainer, View.GONE, fadeOutAnimation);
+                            }
+
+                            return super.onKeyPreIme(keyCode, event);
+                        }
+                    };
+
+                    keyboardInteractionViewId = View.generateViewId();
+
+                    keyboardTextView.setId(keyboardInteractionViewId);
+                    keyboardTextView.setLayoutParams(new ViewGroup.MarginLayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                    keyboardTextView.setHint("Type data to send");
+                    keyboardTextView.setImeOptions(EditorInfo.IME_ACTION_DONE);
+                    keyboardTextView.setFocusable(true);
+                    keyboardTextView.setFocusableInTouchMode(true);
+                    keyboardTextView.setVisibility(View.GONE);
+                    keyboardTextView.addTextChangedListener(new TextWatcher()
+                    {
+                        @Override
+                        public void beforeTextChanged(CharSequence s, int start, int count, int after)
+                        {
+                        }
+
+                        @Override
+                        public void onTextChanged(CharSequence s, int start, int before, int count)
+                        {
+                        }
+
+                        @Override
+                        public void afterTextChanged(Editable s)
+                        {
+                            // TODO: send payload to server
+                        }
+                    });
+
+                    keyboardInteractionContainer.addView(keyboardTextView);
+
+                    keyboardInteractionInitiated = true;
+                }
+
+                ViewUtils.setViewAndChildrenVisibility(keyboardInteractionContainer, View.VISIBLE, fadeInAnimation);
+
+                // grab the focus and show the keyboard
+                keyboardTextView.requestFocus();
+
+                InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                imm.showSoftInput(keyboardTextView, InputMethodManager.SHOW_IMPLICIT);
+            }
+        });
 
         Picasso.with(DeviceInteractionActivity.this)
                .load(R.drawable.touchpad_surface)

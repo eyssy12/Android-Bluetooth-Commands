@@ -10,6 +10,7 @@ import android.os.SystemClock;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.Animation;
 import android.widget.EditText;
 
 import java.io.IOException;
@@ -76,8 +77,13 @@ public class ViewUtils
         return new BitmapDrawable(bitmap);
     }
 
-    public static void setViewAndChildrenVisibility(View view, int visibility)
+    public static void setViewAndChildrenVisibility(View view, int visibility, Animation animation)
     {
+        if (animation != null)
+        {
+            view.startAnimation(animation);
+        }
+
         view.setVisibility(visibility);
 
         if (view instanceof ViewGroup)
@@ -89,6 +95,11 @@ public class ViewUtils
                 setViewAndChildrenVisibility(child, visibility);
             }
         }
+    }
+
+    public static void setViewAndChildrenVisibility(View view, int visibility)
+    {
+        ViewUtils.setViewAndChildrenVisibility(view, visibility, null);
     }
 
     public static void simulateTouchEventForView(View view)

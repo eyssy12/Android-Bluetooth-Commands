@@ -14,39 +14,50 @@
     android:orientation="vertical"
     android:id="@+id/content_device_interaction_mouse">
 
+    <LinearLayout
+        android:id="@+id/keyboard_interaction_container"
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:layout_alignParentTop="true">
 
-        <LinearLayout
+    </LinearLayout>
+
+    <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="vertical"
-            android:id="@+id/interaction"
-            android:layout_above="@+id/keyboard">
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textAppearance="?android:attr/textAppearanceMedium"
-                android:text="Medium Text"
-                android:id="@+id/received_data_text"
-                android:paddingBottom="@dimen/default_padding"/>
+            android:id="@+id/mouse_interaction_container"
+            android:layout_above="@+id/keyboard_interaction_initiator_container">
 
-            <ImageView
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:id="@+id/touchpad_area"/>
-        </LinearLayout>
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:text="Medium Text"
+            android:id="@+id/received_data_text"
+            android:paddingBottom="@dimen/default_padding"/>
 
-        <LinearLayout
-            android:id="@+id/keyboard"
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:id="@+id/touchpad_area"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/keyboard_interaction_initiator_container"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_centerInParent="true"
+        >
+
+        <ImageButton
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_alignParentBottom="true"
-            android:layout_centerInParent="true"
-            >
+            android:id="@+id/keyboard_image_btn"
+            android:src="@drawable/ic_keyboard_black_48dp"/>
+    </LinearLayout>
 
-            <ImageButton
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:id="@+id/keyboard_image_btn"
-                android:src="@drawable/ic_keyboard_black_48dp"/>
-        </LinearLayout>
 </RelativeLayout>

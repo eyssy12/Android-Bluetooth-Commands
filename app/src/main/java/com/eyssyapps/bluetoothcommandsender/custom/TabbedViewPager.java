@@ -57,7 +57,7 @@ public class TabbedViewPager
         {
             TabPageMetadata metadata = inflatablePageMetadata.get(i);
 
-            setTabIcon(metadata.getTab(), metadata.getDrawableResId());
+            tabLayout.getTabAt(i).setIcon(metadata.getDrawableResId());
         }
 
         setCurrentTab(defaultTab);
@@ -77,6 +77,11 @@ public class TabbedViewPager
     public void setCurrentTab(InteractionTab tab)
     {
         viewPager.setCurrentItem(tab.getOrder());
+    }
+
+    public ViewPager getViewPager()
+    {
+        return viewPager;
     }
 
     public InteractionTab getDefaultTab()
