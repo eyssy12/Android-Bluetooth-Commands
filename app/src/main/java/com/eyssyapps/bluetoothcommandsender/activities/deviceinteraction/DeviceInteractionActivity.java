@@ -71,6 +71,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
 
     private int keyboardInteractionViewId;
     private boolean keyboardInteractionInitiated = false;
+    private int previousTextCount = 0;
 
     private boolean doubleBackToExitPressedOnce = false;
 
@@ -259,9 +260,6 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
 
                 gestureHandler.setMouseSensitivity(MOUSE_SENSITIVITY);
             }
-            if (resultCode == RESULT_CANCELED)
-            {
-            }
         }
     }
 
@@ -309,6 +307,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
 
         appBarLayout = (AppBarLayout) findViewById(R.id.app_bar_layout);
         toolbar = (Toolbar) findViewById(R.id.toolbar);
+
         setSupportActionBar(toolbar);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
@@ -407,7 +406,23 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
                         @Override
                         public void afterTextChanged(Editable s)
                         {
-                            // TODO: send payload to server
+                            // TODO: revisit this function
+
+                            int count = s.length();
+
+                            if (count >= 0)
+                            {
+                                if (count > previousTextCount)
+                                {
+                                    connectionThread.write(s.subSequence(count - 1, count).toString());
+                                }
+                                else
+                                {
+                                    connectionThread.write("BACK");
+                                }
+
+                                previousTextCount = count;
+                            }
                         }
                     });
 
