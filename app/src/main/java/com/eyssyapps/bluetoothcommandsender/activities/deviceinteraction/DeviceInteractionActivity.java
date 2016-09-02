@@ -133,9 +133,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
             @Override
             public void onCancel(DialogInterface dialog)
             {
-                setResult(RESULT_FIRST_USER);
-
-                finish();
+                ActivityUtils.finish(DeviceInteractionActivity.this, RESULT_FIRST_USER);
             }
         });
         progressDialog.show();
@@ -149,6 +147,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
         
         List<TabPageMetadata> inflatablePageMetadata = new ArrayList<>();
         inflatablePageMetadata.add(new TabPageMetadata(InteractionTab.MOUSE, R.layout.content_device_interaction_mouse, R.drawable.ic_mouse_white_48dp));
+        // TODO: will most likely re-add this back to allow functionality for some F1-12 keys and more
         //inflatablePageMetadata.add(new TabPageMetadata(InteractionTab.KEYBOARD, R.layout.content_device_interaction_keyboard, R.drawable.ic_keyboard_white_48dp));
         inflatablePageMetadata.add(new TabPageMetadata(InteractionTab.SYSTEM, R.layout.content_device_interaction_system, R.drawable.ic_assignment_white_48dp));
 

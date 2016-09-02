@@ -9,6 +9,7 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 
 import com.eyssyapps.bluetoothcommandsender.R;
+import com.eyssyapps.bluetoothcommandsender.utils.view.ActivityUtils;
 
 public class InteractionSettingsActivity extends Activity implements View.OnClickListener
 {
@@ -43,6 +44,7 @@ public class InteractionSettingsActivity extends Activity implements View.OnClic
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser)
             {
+                // TODO: fix up this
                 float newProgress = (float) progress / 10;
                 mouseSensitivity = newProgress;
 
@@ -67,12 +69,12 @@ public class InteractionSettingsActivity extends Activity implements View.OnClic
         switch (v.getId())
         {
             case R.id.save_settings_button:
+
                 Intent intent = new Intent();
                 intent.putExtra(DeviceInteractionActivity.MOUSE_SENSITIVITY_KEY, mouseSensitivity);
 
-                setResult(RESULT_OK, intent);
+                ActivityUtils.finish(this, RESULT_OK, intent);
 
-                finish();
                 break;
         }
     }
