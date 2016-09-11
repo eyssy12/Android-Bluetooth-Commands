@@ -69,10 +69,9 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
     private static final UUID SERVER_ENDPOINT = UUID.fromString("1f1aa577-32d6-4c59-b9a2-f262994783e9");
     private static float MOUSE_SENSITIVITY = DEFAULT_MOUSE_SENSITIVITY;
 
+    private int previousTextCount = 0;
     private int keyboardInteractionViewId;
     private boolean keyboardInteractionInitiated = false;
-    private int previousTextCount = 0;
-
     private boolean doubleBackToExitPressedOnce = false;
 
     private View parentView;
@@ -115,11 +114,11 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
     {
         fadeInAnimation = AnimationUtils.loadAnimation(this, android.R.anim.fade_in);
         fadeInAnimation.setInterpolator(new AccelerateInterpolator());
-        fadeInAnimation.setDuration(300);
+        fadeInAnimation.setDuration(200);
 
         fadeOutAnimation = AnimationUtils.loadAnimation(this, android.R.anim.fade_out);
         fadeOutAnimation.setInterpolator(new AccelerateInterpolator());
-        fadeOutAnimation.setDuration(300);
+        fadeOutAnimation.setDuration(200);
     }
     
     private void prepareProgressDialog()
@@ -265,7 +264,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
     @Override
     public void onMessageRead(String message)
     {
-        if (message.equals(ServerCommands.Close.toString()))
+        if (message.equals(ServerCommands.CLOSE.toString()))
         {
             connectionThread.close();
         }
@@ -326,12 +325,12 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
 
     private void initialiseTabViews()
     {
-        initialiseMouseInteractions();
-        //initialiseKeyboardInteractions();
+        initialiseMouseAndKeyboardInteractions();
+        //initialiseSpecialKeyboardInteractions();
         initialiseSystemInteractions();
     }
 
-    private void initialiseMouseInteractions()
+    private void initialiseMouseAndKeyboardInteractions()
     {
         final RelativeLayout mouseContainerView = (RelativeLayout) tabbedViewPager.getTabbedAdapter().getViewByInteractionTab(InteractionTab.MOUSE);
         final View mouseInteractionContainer = mouseContainerView.findViewById(R.id.mouse_interaction_container);
@@ -344,15 +343,18 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
 
         final ImageButton keyboardBtn = (ImageButton) keyboardInteractionInitiatorContainer.findViewById(R.id.keyboard_image_btn);
 
+        final List<View> mouseTouchpadInteractiveViews = new ArrayList<>();
+        mouseTouchpadInteractiveViews.add(appBarLayout);
+        mouseTouchpadInteractiveViews.add(mouseInteractionContainer);
+        mouseTouchpadInteractiveViews.add(keyboardInteractionInitiatorContainer);
+
         keyboardBtn.setOnClickListener(new View.OnClickListener()
         {
             @Override
             public void onClick(View v)
             {
                 // hide all the current views
-                ViewUtils.setViewAndChildrenVisibility(appBarLayout, View.GONE, fadeOutAnimation);
-                ViewUtils.setViewAndChildrenVisibility(mouseInteractionContainer, View.GONE, fadeOutAnimation);
-                ViewUtils.setViewAndChildrenVisibility(keyboardInteractionInitiatorContainer, View.GONE, fadeOutAnimation);
+                ViewUtils.setViewAndChildrenVisibility(mouseTouchpadInteractiveViews, View.GONE, fadeOutAnimation);
 
                 EditText keyboardTextView;
                 if (keyboardInteractionInitiated)
@@ -370,11 +372,16 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
                             {
                                 this.setText("");
 
-                                ViewUtils.setViewAndChildrenVisibility(appBarLayout, View.VISIBLE, fadeInAnimation);
-                                ViewUtils.setViewAndChildrenVisibility(mouseInteractionContainer, View.VISIBLE, fadeInAnimation);
-                                ViewUtils.setViewAndChildrenVisibility(keyboardInteractionInitiatorContainer, View.VISIBLE, fadeInAnimation);
+                                // the Soft keyboard has a delay when it is disposed hence it doesnt look as nice when the other views get rendered before it
+                                RunnableUtils.ExecuteWithDelay(new Runnable() {
+                                    @Override
+                                    public void run()
+                                    {
+                                        ViewUtils.setViewAndChildrenVisibility(mouseTouchpadInteractiveViews, View.VISIBLE, fadeInAnimation);
 
-                                ViewUtils.setViewAndChildrenVisibility(keyboardInteractionContainer, View.GONE, fadeOutAnimation);
+                                        ViewUtils.setViewAndChildrenVisibility(keyboardInteractionContainer, View.GONE, fadeOutAnimation);
+                                    }
+                                }, 250);
                             }
 
                             return super.onKeyPreIme(keyCode, event);
@@ -390,6 +397,23 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
                     keyboardTextView.setFocusable(true);
                     keyboardTextView.setFocusableInTouchMode(true);
                     keyboardTextView.setVisibility(View.GONE);
+                    keyboardTextView.setOnKeyListener(new View.OnKeyListener() {
+                        @Override
+                        public boolean onKey(View v, int keyCode, KeyEvent event)
+                        {
+                            // TODO: this doesn't work as expected ->
+                            // the amount of times the user presses a character keycode in the soft keyboard on the edittext,
+                            // the amount times + 1 it takes before the keyListener starts registering the delete key event.
+
+                            // onKey gets called twice on a button press -> 1 for ACTION_DOWN, 2 for ACTION_UP
+                            if (event.getAction() == KeyEvent.ACTION_UP && keyCode == KeyEvent.KEYCODE_DEL)
+                            {
+                                connectionThread.write(ServerCommands.BACKSPACE.toString());
+                            }
+
+                            return true;
+                        }
+                    });
                     keyboardTextView.addTextChangedListener(new TextWatcher()
                     {
                         @Override
@@ -409,19 +433,12 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
 
                             int count = s.length();
 
-                            if (count >= 0)
+                            if (count > previousTextCount)
                             {
-                                if (count > previousTextCount)
-                                {
-                                    connectionThread.write(s.subSequence(count - 1, count).toString());
-                                }
-                                else
-                                {
-                                    connectionThread.write("BACK");
-                                }
-
-                                previousTextCount = count;
+                                connectionThread.write(s.subSequence(count - 1, count).toString());
                             }
+
+                            previousTextCount = count;
                         }
                     });
 
@@ -469,7 +486,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
         });
     }
 
-    private void initialiseKeyboardInteractions()
+    private void initialiseSpecialKeyboardInteractions()
     {
         View keyboardContainerView = tabbedViewPager.getTabbedAdapter().getViewByInteractionTab(InteractionTab.KEYBOARD);
     }
@@ -492,18 +509,21 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
             {
                 connectionThread.write(Commands.END_SESSION.toString());
             }
-
-            this.doubleBackToExitPressedOnce = true;
-            SystemMessagingUtils.showToast(this, "Please click BACK again to exit", Toast.LENGTH_SHORT);
-
-            RunnableUtils.ExecuteWithDelay(new Runnable()
+            else
             {
-                @Override
-                public void run()
+                this.doubleBackToExitPressedOnce = true;
+
+                SystemMessagingUtils.showToast(this, "Please click BACK again to exit", Toast.LENGTH_SHORT);
+
+                RunnableUtils.ExecuteWithDelay(new Runnable()
                 {
-                    doubleBackToExitPressedOnce = false;
-                }
-            }, 2000);
+                    @Override
+                    public void run()
+                    {
+                        doubleBackToExitPressedOnce = false;
+                    }
+                }, 2000);
+            }
         }
     }
 }

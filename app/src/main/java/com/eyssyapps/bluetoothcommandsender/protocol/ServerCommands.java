@@ -5,7 +5,8 @@ package com.eyssyapps.bluetoothcommandsender.protocol;
  */
 public enum ServerCommands
 {
-    Close("Close");
+    BACKSPACE("Backspace"),
+    CLOSE("Close");
 
     private final String value;
 

@@ -7,6 +7,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.SystemClock;
+import android.support.annotation.NonNull;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,6 +18,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.List;
 import java.util.regex.Pattern;
 
 /**
@@ -77,12 +79,25 @@ public class ViewUtils
         return new BitmapDrawable(bitmap);
     }
 
-    public static void setViewAndChildrenVisibility(View view, int visibility)
+    public static void setViewAndChildrenVisibility(@NonNull List<View> views, int visibility)
+    {
+        ViewUtils.setViewAndChildrenVisibility(views, visibility, null);
+    }
+
+    public static void setViewAndChildrenVisibility(@NonNull List<View> views, int visibility, Animation animation)
+    {
+        for (View view : views)
+        {
+            ViewUtils.setViewAndChildrenVisibility(view, visibility, animation);
+        }
+    }
+
+    public static void setViewAndChildrenVisibility(@NonNull View view, int visibility)
     {
         ViewUtils.setViewAndChildrenVisibility(view, visibility, null);
     }
 
-    public static void setViewAndChildrenVisibility(View view, int visibility, Animation animation)
+    public static void setViewAndChildrenVisibility(@NonNull View view, int visibility, Animation animation)
     {
         if (animation != null)
         {

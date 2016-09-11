@@ -66,8 +66,6 @@ public class MainActivity extends AppCompatActivity
         mainContainerView = findViewById(R.id.coordinate_layout_main);
         contentContainerView = mainContainerView.findViewById(R.id.content_main_include);
 
-        // TODO: create a TabPager that has a tab for discovering devices, another for already paired devices
-
         toolbarProgressBar = (ProgressBar) mainContainerView.findViewById(R.id.toolbar_progress_bar);
         toolbarProgressBar.setIndeterminate(true);
         toolbarProgressBar.setVisibility(View.INVISIBLE);

@@ -62,6 +62,8 @@ public class BluetoothDeviceAdapter extends RecyclerViewAdapterBase<BluetoothDev
                     .setIcon(R.drawable.options)
                     .setItems(ITEMS, new DialogInterface.OnClickListener()
                     {
+                        // TODO: change this to setAdapter instead to customise the dialog better with icons
+
                         public void onClick(DialogInterface dialog, int which)
                         {
                             if (which == 0)
