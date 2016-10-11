@@ -156,7 +156,6 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
             @Override
             public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels)
             {
-                // TODO: could try and see if the pageScrolled is over 50% of the tab and then fade out any menu items
             }
 
             @Override
@@ -164,6 +163,15 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
             {
                 previousTab = currentTab;
                 currentTab = InteractionTab.getEnumFromOrder(position);
+
+                if (currentTab == InteractionTab.MOUSE)
+                {
+                    tabbedViewPager.disablePageListener();
+                }
+                else
+                {
+                    tabbedViewPager.enablePageListener();
+                }
 
                 doubleBackToExitPressedOnce = false;
 
@@ -173,7 +181,6 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
             @Override
             public void onPageScrollStateChanged(int state)
             {
-
             }
         };
 

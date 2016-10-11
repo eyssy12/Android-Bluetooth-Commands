@@ -5,6 +5,7 @@ import android.graphics.drawable.Drawable;
 import android.support.design.widget.TabLayout;
 import android.support.v4.util.Pair;
 import android.support.v4.view.ViewPager;
+import android.view.MotionEvent;
 import android.view.View;
 
 import com.eyssyapps.bluetoothcommandsender.adapters.TabbedViewPagerAdapter;
@@ -27,6 +28,7 @@ public class TabbedViewPager
     private TabLayout tabLayout;
     private TabbedViewPagerAdapter adapter;
     private InteractionTab defaultTab;
+    private ViewPager.OnPageChangeListener changeListener;
 
     public TabbedViewPager(
             Context context,
@@ -39,11 +41,12 @@ public class TabbedViewPager
         this.parentView = parentView;
         this.viewPagerTabLayoutResIds = viewPagerTabLayoutResIds;
         this.defaultTab = InteractionTab.getDefaultTab();
+        this.changeListener = changeListener;
 
-        initialise(changeListener, inflatablePageMetadata);
+        initialise(inflatablePageMetadata);
     }
 
-    private void initialise(ViewPager.OnPageChangeListener changeListener, List<TabPageMetadata> inflatablePageMetadata)
+    private void initialise(List<TabPageMetadata> inflatablePageMetadata)
     {
         adapter = new TabbedViewPagerAdapter(context, inflatablePageMetadata);
 
@@ -61,7 +64,37 @@ public class TabbedViewPager
         }
 
         setCurrentTab(defaultTab);
+
         viewPager.addOnPageChangeListener(changeListener);
+        viewPager.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event)
+            {
+                return true;
+            }
+        });
+    }
+
+    public void disablePageListener()
+    {
+        viewPager.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event)
+            {
+                return true;
+            }
+        });
+    }
+
+    public void enablePageListener()
+    {
+        viewPager.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event)
+            {
+                return false;
+            }
+        });
     }
 
     public void setTabIcon(InteractionTab which, Drawable drawable)

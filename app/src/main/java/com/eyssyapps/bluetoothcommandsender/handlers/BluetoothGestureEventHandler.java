@@ -70,15 +70,17 @@ public class BluetoothGestureEventHandler implements
     {
         MotionDistance distances = new MotionDistance(-distanceX, -distanceY); // 2 decimal places
 
-        if (distances.shouldSend())
-        {
-            String payload =
-                    (MotionDistance.increaseMouseMovement(distances.getDistanceX(), mouseSensitivity, Coordinate.X, 1)) +
-                    ":" +
-                    (MotionDistance.increaseMouseMovement(distances.getDistanceY(), mouseSensitivity, Coordinate.Y, 1));
+//        if (distances.shouldSend())
+//        {
+//
+//        }
 
-            connectionThread.write(payload);
-        }
+        String payload =
+                (MotionDistance.increaseMouseMovement(distances.getDistanceX(), 1, Coordinate.X, 1)) +
+                ":" +
+                (MotionDistance.increaseMouseMovement(distances.getDistanceY(), 1, Coordinate.Y, 1));
+
+        connectionThread.write(payload);
 
         return true;
     }
