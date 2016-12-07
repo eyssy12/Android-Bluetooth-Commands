@@ -49,6 +49,7 @@ import com.eyssyapps.bluetoothcommandsender.utils.view.SystemMessagingUtils;
 import com.eyssyapps.bluetoothcommandsender.utils.view.ViewUtils;
 import com.squareup.picasso.Picasso;
 
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -66,7 +67,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
     // TODO: so far, this would only connect to one pc with this designated UUID/GUID
     // if i'm going to allow for functionality to allow connection to other pc's,
     // then i will need to implement something like a barcode scanner to get the string contents for the UUID of the server rather than a manual type-in operation for the user
-    private static final UUID SERVER_ENDPOINT = UUID.fromString("1f1aa577-32d6-4c59-b9a2-f262994783e9");
+    private static UUID SERVER_ENDPOINT = UUID.fromString("1f1aa577-32d6-4c59-b9a2-f262994783e9");
     private static float MOUSE_SENSITIVITY = DEFAULT_MOUSE_SENSITIVITY;
 
     private int previousTextCount = 0;
@@ -99,6 +100,15 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
         parentView = findViewById(android.R.id.content);
 
         ViewUtils.setViewAndChildrenVisibility(parentView, View.INVISIBLE);
+
+        try
+        {
+            SERVER_ENDPOINT = UUID.nameUUIDFromBytes("12345".getBytes("UTF-8"));
+        }
+        catch (UnsupportedEncodingException e)
+        {
+            e.printStackTrace();
+        }
 
         targetDevice = getIntent().getExtras().getParcelable(DEVICE_KEY);
 
@@ -193,6 +203,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
     private void prepareBluetoothHandlers()
     {
         messageHandler = new BluetoothMessageHandler(this);
+        // TODO: pass down the password that will create the server endpoint out of it as a UUID
         connectionThread = new BluetoothConnectionThread(SERVER_ENDPOINT, targetDevice, messageHandler);
         gestureHandler = new BluetoothGestureEventHandler(this, connectionThread, MOUSE_SENSITIVITY);
     }
