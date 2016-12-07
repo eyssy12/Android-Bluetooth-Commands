@@ -167,10 +167,12 @@ public class BluetoothConnectionThread extends Thread
             socket.close();
 
             sendHandlerMessage(CONNECTION_ABORTED, 0, -1, new byte[]{});
-
-            connectionState = ConnectionState.DISCONNECTED;
         }
         catch (IOException e)
+        {
+            // log exception
+        }
+        finally
         {
             connectionState = ConnectionState.DISCONNECTED;
         }
