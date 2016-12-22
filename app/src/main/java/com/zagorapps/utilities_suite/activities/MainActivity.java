@@ -63,7 +63,7 @@ public class MainActivity extends AppCompatActivity
 
         prepareStatics();
 
-        // TODO: use this when notification logic will be implemented
+        // TODO: use this when notification logic will be implementedd
         // ShortcutBadger.applyCount(getApplicationContext(), 2);
 
         mainContainerView = findViewById(R.id.coordinate_layout_main);
