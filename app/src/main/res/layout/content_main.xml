@@ -10,7 +10,7 @@
     tools:context=".activities.MainActivity"
     tools:showIn="@layout/activity_main">
 
-    <com.eyssyapps.bluetoothcommandsender.custom.EmptyRecyclerView
+    <com.eyssyapps.utilities_suite.custom.EmptyRecyclerView
         android:id="@+id/recycler_view_empty_support"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
