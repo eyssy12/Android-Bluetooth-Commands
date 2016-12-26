@@ -51,6 +51,7 @@ public class TabbedViewPager
         adapter = new TabbedViewPagerAdapter(context, inflatablePageMetadata);
 
         viewPager = (ViewPager) parentView.findViewById(viewPagerTabLayoutResIds.first);
+        viewPager.setOffscreenPageLimit(inflatablePageMetadata.size());
         viewPager.setAdapter(adapter);
 
         tabLayout = (TabLayout) parentView.findViewById(viewPagerTabLayoutResIds.second);

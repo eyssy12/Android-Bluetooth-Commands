@@ -8,7 +8,8 @@ public enum InteractionTab
     NOT_SET(-1),
     MOUSE(0),
     KEYBOARD(1),
-    SYSTEM(2);
+    SYSTEM(2),
+    VOICE(3);
 
     private final int order;
 

@@ -21,6 +21,7 @@ import android.widget.ProgressBar;
 
 import com.zagorapps.utilities_suite.R;
 import com.zagorapps.utilities_suite.activities.deviceinteraction.DeviceInteractionActivity;
+import com.zagorapps.utilities_suite.activities.prototypes.UdpConnectToServer;
 import com.zagorapps.utilities_suite.adapters.BluetoothDeviceAdapter;
 import com.zagorapps.utilities_suite.custom.EmptyRecyclerView;
 import com.zagorapps.utilities_suite.state.ComplexPreferences;
@@ -72,6 +73,17 @@ public class MainActivity extends AppCompatActivity
         toolbarProgressBar = (ProgressBar) mainContainerView.findViewById(R.id.toolbar_progress_bar);
         toolbarProgressBar.setIndeterminate(true);
         toolbarProgressBar.setVisibility(View.INVISIBLE);
+
+        Button button = (Button) mainContainerView.findViewById(R.id.toolbar_test_button);
+        button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v)
+            {
+                Intent intent = new Intent(MainActivity.this, UdpConnectToServer.class);
+
+                MainActivity.this.startActivity(intent);
+            }
+        });
 
         layoutManager = new LinearLayoutManager(this);
         layoutManager.setOrientation(LinearLayoutManager.VERTICAL);

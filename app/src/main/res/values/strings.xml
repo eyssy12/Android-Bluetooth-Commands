@@ -11,5 +11,11 @@
     <string name="discovery_activity_discovering_message">Discovering...</string>
     <string name="title_activity_device_interaction">Controls</string>
     <string name="title_activity_interaction_settings">InteractionSettingsActivity</string>
+    <string name="title_activity_udp_connect_to_server">UdpConnectToServer</string>
+
+    <string name="hello_world">Hello world!</string>
+    <string name="speech_prompt">Say something&#8230;</string>
+    <string name="speech_not_supported">Sorry! Your device doesn\'t support speech input</string>
+    <string name="tap_on_mic">Tap on mic to speak</string>
 
 </resources>
