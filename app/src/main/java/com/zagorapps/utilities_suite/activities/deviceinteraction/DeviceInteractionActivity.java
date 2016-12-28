@@ -11,6 +11,7 @@ import android.speech.SpeechRecognizer;
 import android.support.design.widget.AppBarLayout;
 import android.support.v4.util.Pair;
 import android.support.v4.view.ViewPager;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.text.Editable;
@@ -22,6 +23,7 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.view.animation.AccelerateInterpolator;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
@@ -93,6 +95,8 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
     private Intent mSpeechRecognizerIntent;
     private boolean mIslistening;
 
+    private AlertDialog machineLockedDialog;
+
     private BluetoothConnectionThread connectionThread;
     private BluetoothDeviceLite targetDevice;
     private BluetoothMessageHandler messageHandler;
@@ -120,6 +124,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
         targetDevice = getIntent().getExtras().getParcelable(DEVICE_KEY);
 
         prepareStatics();
+        prepareMachineAlertDialog();
         prepareProgressDialog();
         prepareTabbedView();
         prepareBluetoothHandlers();
@@ -212,6 +217,18 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
         if (message.equals(ServerCommands.CLOSE.toString()))
         {
             connectionThread.close();
+        }
+        else if (message.equals("Permitted Process Running"))
+        {
+            SystemMessagingUtils.showShortToast(this, "Unable to perform system command since more than one permitted process is running.");
+        }
+        else if (message.equals("machine_locked"))
+        {
+            machineLockedDialog.show();
+        }
+        else if (message.equals("machine_unlocked"))
+        {
+            machineLockedDialog.dismiss();
         }
         else
         {
@@ -313,6 +330,22 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
         fadeOutAnimation = AnimationUtils.loadAnimation(this, android.R.anim.fade_out);
         fadeOutAnimation.setInterpolator(new AccelerateInterpolator());
         fadeOutAnimation.setDuration(200);
+    }
+
+    private void prepareMachineAlertDialog()
+    {
+        machineLockedDialog = new AlertDialog.Builder(this)
+            .setTitle("Machine Locked")
+            .setIcon(R.drawable.options) // TODO: change icon
+            .setCancelable(false)
+            .create();
+
+        WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
+        lp.copyFrom(machineLockedDialog.getWindow().getAttributes());
+        lp.width = WindowManager.LayoutParams.MATCH_PARENT;
+        lp.height = WindowManager.LayoutParams.MATCH_PARENT;
+
+        machineLockedDialog.getWindow().setAttributes(lp);
     }
 
     private void prepareProgressDialog()
