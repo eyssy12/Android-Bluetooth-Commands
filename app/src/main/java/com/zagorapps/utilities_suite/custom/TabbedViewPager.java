@@ -5,7 +5,6 @@ import android.graphics.drawable.Drawable;
 import android.support.design.widget.TabLayout;
 import android.support.v4.util.Pair;
 import android.support.v4.view.ViewPager;
-import android.view.MotionEvent;
 import android.view.View;
 
 import com.zagorapps.utilities_suite.adapters.TabbedViewPagerAdapter;
@@ -24,18 +23,18 @@ public class TabbedViewPager
 
     private final Pair<Integer, Integer> viewPagerTabLayoutResIds;
 
-    private ViewPager viewPager;
+    private CustomViewPager viewPager;
     private TabLayout tabLayout;
     private TabbedViewPagerAdapter adapter;
     private InteractionTab defaultTab;
     private ViewPager.OnPageChangeListener changeListener;
 
     public TabbedViewPager(
-            Context context,
-            View parentView,
-            ViewPager.OnPageChangeListener changeListener,
-            Pair<Integer, Integer> viewPagerTabLayoutResIds,
-            List<TabPageMetadata> inflatablePageMetadata)
+        Context context,
+        View parentView,
+        ViewPager.OnPageChangeListener changeListener,
+        Pair<Integer, Integer> viewPagerTabLayoutResIds,
+        List<TabPageMetadata> inflatablePageMetadata)
     {
         this.context = context;
         this.parentView = parentView;
@@ -48,83 +47,65 @@ public class TabbedViewPager
 
     private void initialise(List<TabPageMetadata> inflatablePageMetadata)
     {
-        adapter = new TabbedViewPagerAdapter(context, inflatablePageMetadata);
+        this.adapter = new TabbedViewPagerAdapter(this.context, inflatablePageMetadata);
 
-        viewPager = (ViewPager) parentView.findViewById(viewPagerTabLayoutResIds.first);
-        viewPager.setOffscreenPageLimit(inflatablePageMetadata.size());
-        viewPager.setAdapter(adapter);
+        this.viewPager = (CustomViewPager) this.parentView.findViewById(this.viewPagerTabLayoutResIds.first);
+        this.viewPager.setOffscreenPageLimit(inflatablePageMetadata.size());
+        this.viewPager.setAdapter(this.adapter);
 
-        tabLayout = (TabLayout) parentView.findViewById(viewPagerTabLayoutResIds.second);
-        tabLayout.setupWithViewPager(viewPager);
+        this.tabLayout = (TabLayout) this.parentView.findViewById(this.viewPagerTabLayoutResIds.second);
+        this.tabLayout.setupWithViewPager(this.viewPager);
 
         for (int i = 0; i < inflatablePageMetadata.size(); i++)
         {
             TabPageMetadata metadata = inflatablePageMetadata.get(i);
 
-            tabLayout.getTabAt(i).setIcon(metadata.getDrawableResId());
+            this.tabLayout.getTabAt(i).setIcon(metadata.getDrawableResId());
         }
 
-        setCurrentTab(defaultTab);
+        this.setCurrentTab(this.defaultTab);
 
-        viewPager.addOnPageChangeListener(changeListener);
-        viewPager.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event)
-            {
-                return true;
-            }
-        });
+        this.viewPager.addOnPageChangeListener(this.changeListener);
+        this.viewPager.setSwipeEnabled(false);
     }
 
     public void disablePageListener()
     {
-        viewPager.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event)
-            {
-                return true;
-            }
-        });
+        this.viewPager.setSwipeEnabled(false);
     }
 
     public void enablePageListener()
     {
-        viewPager.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event)
-            {
-                return false;
-            }
-        });
+        this.viewPager.setSwipeEnabled(true);
     }
 
     public void setTabIcon(InteractionTab which, Drawable drawable)
     {
-        tabLayout.getTabAt(which.getOrder()).setIcon(drawable);
+        this.tabLayout.getTabAt(which.getOrder()).setIcon(drawable);
     }
 
     public void setTabIcon(InteractionTab which, int drawableId)
     {
-        tabLayout.getTabAt(which.getOrder()).setIcon(drawableId);
+        this.tabLayout.getTabAt(which.getOrder()).setIcon(drawableId);
     }
     
     public void setCurrentTab(InteractionTab tab)
     {
-        viewPager.setCurrentItem(tab.getOrder());
+        this.viewPager.setCurrentItem(tab.getOrder());
     }
 
     public ViewPager getViewPager()
     {
-        return viewPager;
+        return this.viewPager;
     }
 
     public InteractionTab getDefaultTab()
     {
-        return defaultTab;
+        return this.defaultTab;
     }
 
     public TabbedViewPagerAdapter getTabbedAdapter()
     {
-        return adapter;
+        return this.adapter;
     }
 }
