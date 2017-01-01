@@ -81,24 +81,27 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
     private boolean keyboardInteractionInitiated = false;
     private boolean doubleBackToExitPressedOnce = false;
 
+    // Parent View
     private View parentView;
     private AppBarLayout appBarLayout;
     private Toolbar toolbar;
     private TabbedViewPager tabbedViewPager;
     private InteractionTab currentTab, previousTab;
-
     private Animation fadeInAnimation, fadeOutAnimation;
+
+    private String[] initialSyncData;
+
+    // Mouse View
     private ProgressDialog progressDialog;
     private TextView textView;
     private ImageView touchPadArea;
 
+    // Voice View
     private TextView txtSpeechInput;
     private ImageButton btnSpeak;
-
     private SpeechRecognizer speechRecogniser;
     private Intent speechRecogniserIntent;
     private boolean isSpeechRecogniserListening = false;
-
     private AlertDialog machineLockedDialog;
 
     // System View
@@ -258,19 +261,21 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
 
                 if (!this.serverSyncupInitialised)
                 {
-                    progressDialog.dismiss();
-
                     appBarLayout = (AppBarLayout) findViewById(R.id.app_bar_layout);
                     toolbar = (Toolbar) findViewById(R.id.toolbar);
 
                     setSupportActionBar(toolbar);
                     getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
+                    initialSyncData = data[1].split("_");
+
                     initialiseTabViews();
 
-                    ViewUtils.setViewAndChildrenVisibility(parentView, View.VISIBLE);
+                    progressDialog.dismiss();
 
                     this.serverSyncupInitialised = true;
+
+                    ViewUtils.setViewAndChildrenVisibility(parentView, View.VISIBLE);
                 }
             }
             else if (data[0].equals("vol"))
@@ -280,6 +285,11 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
                 {
                     Double value = Double.valueOf(data[1]);
 
+                    if (muteButton.isChecked())
+                    {
+                        this.setMuteButtonChecked(false);
+                    }
+
                     systemVolume.setOnSeekBarChangeListener(null);
                     systemVolume.setProgress(value.intValue());
                     systemVolume.setOnSeekBarChangeListener(systemVolumeChangeListener);
@@ -288,9 +298,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
                 {
                     boolean value = Boolean.valueOf(data[1]);
 
-                    muteButton.setOnCheckedChangeListener(null);
-                    muteButton.setChecked(value);
-                    muteButton.setOnCheckedChangeListener(this.muteButtonCheckedChangeListener);
+                    this.setMuteButtonChecked(value);
                 }
             }
         }
@@ -396,6 +404,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
                 .setCancelable(false)
                 .create();
 
+        // TODO: this is not working, should investigate
         WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
         lp.copyFrom(machineLockedDialog.getWindow().getAttributes());
         lp.width = WindowManager.LayoutParams.MATCH_PARENT;
@@ -433,7 +442,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
                 R.layout.content_device_interaction_mouse,
                 R.drawable.ic_mouse_white_48dp));
         // TODO: will most likely re-add this back to allow functionality for some F1-12 keys and more
-        // inflatablePageMetadata.add(new TabPageMetadata(InteractionTab.KEYBOARD, R.layout.content_device_interaction_keyboard, R.drawable.ic_keyboard_white_48dp));
+        inflatablePageMetadata.add(new TabPageMetadata(InteractionTab.KEYBOARD, R.layout.content_device_interaction_keyboard, R.drawable.ic_keyboard_white_48dp));
         inflatablePageMetadata.add(new TabPageMetadata(InteractionTab.SYSTEM,
                 R.layout.content_device_interaction_system,
                 R.drawable.ic_assignment_white_48dp));
@@ -700,13 +709,15 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
         View systemContainerView = tabbedViewPager.getTabbedAdapter()
                                                   .getViewByInteractionTab(InteractionTab.SYSTEM);
 
-        systemVolume = (SeekBar)systemContainerView.findViewById(R.id.seekBar_systemVolume);
-        systemVolumeChangeListener = new SeekBarChangeListener();
-        systemVolume.setOnSeekBarChangeListener(systemVolumeChangeListener);
+        this.systemVolume = (SeekBar)systemContainerView.findViewById(R.id.seekBar_systemVolume);
+        this.systemVolume.setProgress(Integer.valueOf(initialSyncData[1]));
+        this.systemVolumeChangeListener = new SeekBarChangeListener();
+        this.systemVolume.setOnSeekBarChangeListener(systemVolumeChangeListener);
 
-        muteButton = (ToggleButton) systemContainerView.findViewById(R.id.toggleButton_systemVolumeMute);
-        muteButtonCheckedChangeListener = new ToggleButtonCheckedChangeListener();
-        muteButton.setOnCheckedChangeListener(muteButtonCheckedChangeListener);
+        this.muteButton = (ToggleButton) systemContainerView.findViewById(R.id.toggleButton_systemVolumeMute);
+        this.muteButton.setChecked(Boolean.valueOf(initialSyncData[0]));
+        this.muteButtonCheckedChangeListener = new ToggleButtonCheckedChangeListener();
+        this.muteButton.setOnCheckedChangeListener(muteButtonCheckedChangeListener);
     }
 
     private void initialiseVoiceInteractions()
@@ -727,6 +738,13 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
                 }
             }
         });
+    }
+
+    private void setMuteButtonChecked(boolean isChecked)
+    {
+        this.muteButton.setOnCheckedChangeListener(null);
+        this.muteButton.setChecked(isChecked);
+        this.muteButton.setOnCheckedChangeListener(this.muteButtonCheckedChangeListener);
     }
 
     protected class SeekBarChangeListener implements SeekBar.OnSeekBarChangeListener
