@@ -29,13 +29,16 @@ import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.ToggleButton;
 
 import com.squareup.picasso.Picasso;
 import com.zagorapps.utilities_suite.R;
@@ -49,6 +52,7 @@ import com.zagorapps.utilities_suite.state.InteractionTab;
 import com.zagorapps.utilities_suite.state.models.BluetoothDeviceLite;
 import com.zagorapps.utilities_suite.state.models.TabPageMetadata;
 import com.zagorapps.utilities_suite.threading.BluetoothConnectionThread;
+import com.zagorapps.utilities_suite.utils.data.NumberUtils;
 import com.zagorapps.utilities_suite.utils.threading.RunnableUtils;
 import com.zagorapps.utilities_suite.utils.view.ActivityUtils;
 import com.zagorapps.utilities_suite.utils.view.SystemMessagingUtils;
@@ -97,10 +101,18 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
 
     private AlertDialog machineLockedDialog;
 
+    // System View
+    private SeekBar systemVolume;
+    private SeekBarChangeListener systemVolumeChangeListener;
+    private ToggleButton muteButton;
+    private ToggleButtonCheckedChangeListener muteButtonCheckedChangeListener;
+
     private BluetoothConnectionThread connectionThread;
     private BluetoothDeviceLite targetDevice;
     private BluetoothMessageHandler messageHandler;
     private BluetoothGestureEventHandler gestureHandler;
+
+    private boolean serverSyncupInitialised = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -216,6 +228,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
     @Override
     public void onMessageRead(String message)
     {
+        // TODO: implement JSON based messaging
         if (message.equals(ServerCommands.CLOSE.toString()))
         {
             connectionThread.close();
@@ -232,6 +245,54 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
         else if (message.equals("machine_unlocked"))
         {
             machineLockedDialog.dismiss();
+        }
+        else if (message.contains(":"))
+        {
+            String[] data = message.split(":");
+
+            if (data[0].equals("SyncResponse"))
+            {
+                // TODO: return all data for the sync operation
+
+                this.connectionThread.write("SyncResponseAck");
+
+                if (!this.serverSyncupInitialised)
+                {
+                    progressDialog.dismiss();
+
+                    appBarLayout = (AppBarLayout) findViewById(R.id.app_bar_layout);
+                    toolbar = (Toolbar) findViewById(R.id.toolbar);
+
+                    setSupportActionBar(toolbar);
+                    getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+
+                    initialiseTabViews();
+
+                    ViewUtils.setViewAndChildrenVisibility(parentView, View.VISIBLE);
+
+                    this.serverSyncupInitialised = true;
+                }
+            }
+            else if (data[0].equals("vol"))
+            {
+                // Data sent by the server is not one that the listeners should relay back to it, only user interaction ones
+                if (NumberUtils.isNumeric(data[1]))
+                {
+                    Double value = Double.valueOf(data[1]);
+
+                    systemVolume.setOnSeekBarChangeListener(null);
+                    systemVolume.setProgress(value.intValue());
+                    systemVolume.setOnSeekBarChangeListener(systemVolumeChangeListener);
+                }
+                else
+                {
+                    boolean value = Boolean.valueOf(data[1]);
+
+                    muteButton.setOnCheckedChangeListener(null);
+                    muteButton.setChecked(value);
+                    muteButton.setOnCheckedChangeListener(this.muteButtonCheckedChangeListener);
+                }
+            }
         }
         else
         {
@@ -266,17 +327,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
     @Override
     public void onConnectionEstablished()
     {
-        progressDialog.dismiss();
-
-        appBarLayout = (AppBarLayout) findViewById(R.id.app_bar_layout);
-        toolbar = (Toolbar) findViewById(R.id.toolbar);
-
-        setSupportActionBar(toolbar);
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-
-        initialiseTabViews();
-
-        ViewUtils.setViewAndChildrenVisibility(parentView, View.VISIBLE);
+        this.connectionThread.write("SyncRequest");
     }
 
     @Override
@@ -648,6 +699,14 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
     {
         View systemContainerView = tabbedViewPager.getTabbedAdapter()
                                                   .getViewByInteractionTab(InteractionTab.SYSTEM);
+
+        systemVolume = (SeekBar)systemContainerView.findViewById(R.id.seekBar_systemVolume);
+        systemVolumeChangeListener = new SeekBarChangeListener();
+        systemVolume.setOnSeekBarChangeListener(systemVolumeChangeListener);
+
+        muteButton = (ToggleButton) systemContainerView.findViewById(R.id.toggleButton_systemVolumeMute);
+        muteButtonCheckedChangeListener = new ToggleButtonCheckedChangeListener();
+        muteButton.setOnCheckedChangeListener(muteButtonCheckedChangeListener);
     }
 
     private void initialiseVoiceInteractions()
@@ -670,12 +729,42 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
         });
     }
 
+    protected class SeekBarChangeListener implements SeekBar.OnSeekBarChangeListener
+    {
+
+        @Override
+        public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser)
+        {
+            connectionThread.write("vol:" + progress);
+        }
+
+        @Override
+        public void onStartTrackingTouch(SeekBar seekBar)
+        {
+
+        }
+
+        @Override
+        public void onStopTrackingTouch(SeekBar seekBar)
+        {
+
+        }
+    }
+
+    protected class ToggleButtonCheckedChangeListener implements CompoundButton.OnCheckedChangeListener
+    {
+        @Override
+        public void onCheckedChanged(CompoundButton buttonView, boolean isChecked)
+        {
+            connectionThread.write("vol:" + isChecked); // true for mute
+        }
+    }
+
     protected class SpeechRecognitionListener implements RecognitionListener
     {
         @Override
         public void onBeginningOfSpeech()
         {
-            //Log.d(TAG, "onBeginingOfSpeech");
         }
 
         @Override
@@ -687,15 +776,12 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
         @Override
         public void onEndOfSpeech()
         {
-            //Log.d(TAG, "onEndOfSpeech");
         }
 
         @Override
         public void onError(int error)
         {
             speechRecogniser.startListening(speechRecogniserIntent);
-
-            //Log.d(TAG, "error = " + error);
         }
 
         @Override
@@ -718,15 +804,15 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
         @Override
         public void onResults(Bundle results)
         {
-            //Log.d(TAG, "onResults"); //$NON-NLS-1$
             ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-            // matches are the return values of speech recognition engine
-            // Use these values for whatever you wish to do
 
-            String recognisedText = matches.get(0);
+            if (matches != null && matches.size() > 0)
+            {
+                String recognisedText = matches.get(0);
 
-            txtSpeechInput.setText(recognisedText);
-            connectionThread.write(recognisedText);
+                txtSpeechInput.setText(recognisedText);
+                connectionThread.write(recognisedText);
+            }
         }
 
         @Override
