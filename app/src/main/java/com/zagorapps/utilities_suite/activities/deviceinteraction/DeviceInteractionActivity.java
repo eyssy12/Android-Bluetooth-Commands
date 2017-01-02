@@ -14,8 +14,6 @@ import android.support.v4.view.ViewPager;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.text.Editable;
-import android.text.TextWatcher;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -30,7 +28,6 @@ import android.view.animation.AnimationUtils;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.CompoundButton;
-import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -546,6 +543,8 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
         mouseTouchPadInteractiveViews.add(mouseInteractionContainer);
         mouseTouchPadInteractiveViews.add(keyboardInteractionInitiatorContainer);
 
+        // TODO: this should display a view that is "included" in the parent view of the interaction container
+        // I shouldn't need to programatically create textview's etc.
         keyboardBtn.setOnClickListener(new View.OnClickListener()
         {
             @Override
@@ -556,23 +555,20 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
                         View.GONE,
                         fadeOutAnimation);
 
-                EditText keyboardTextView;
+                final TextView characterDisplayView;
                 if (keyboardInteractionInitiated)
                 {
-                    keyboardTextView = (EditText) keyboardInteractionContainer.findViewById(
-                            keyboardInteractionViewId);
+                    characterDisplayView = (TextView) keyboardInteractionContainer.findViewById(keyboardInteractionViewId);
                 }
                 else
                 {
-                    keyboardTextView = new EditText(DeviceInteractionActivity.this)
+                    characterDisplayView = new TextView(DeviceInteractionActivity.this)
                     {
                         @Override
                         public boolean onKeyPreIme(int keyCode, KeyEvent event)
                         {
                             if (event.getKeyCode() == KeyEvent.KEYCODE_BACK)
                             {
-                                this.setText("");
-
                                 // the Soft keyboard has a delay when it is disposed hence it doesnt look as nice when the other views get rendered before it
                                 RunnableUtils.ExecuteWithDelay(new Runnable()
                                 {
@@ -580,14 +576,14 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
                                     public void run()
                                     {
                                         ViewUtils.setViewAndChildrenVisibility(
-                                            mouseTouchPadInteractiveViews,
-                                            View.VISIBLE,
-                                            fadeInAnimation);
+                                                mouseTouchPadInteractiveViews,
+                                                View.VISIBLE,
+                                                fadeInAnimation);
 
                                         ViewUtils.setViewAndChildrenVisibility(
-                                            keyboardInteractionContainer,
-                                            View.GONE,
-                                            fadeOutAnimation);
+                                                keyboardInteractionContainer,
+                                                View.GONE,
+                                                fadeOutAnimation);
                                     }
                                 }, 250);
                             }
@@ -598,60 +594,43 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
 
                     keyboardInteractionViewId = View.generateViewId();
 
-                    keyboardTextView.setId(keyboardInteractionViewId);
-                    keyboardTextView.setLayoutParams(new ViewGroup.MarginLayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-                    keyboardTextView.setHint("Type data to send");
-                    keyboardTextView.setImeOptions(EditorInfo.IME_ACTION_DONE);
-                    keyboardTextView.setFocusable(true);
-                    keyboardTextView.setFocusableInTouchMode(true);
-                    keyboardTextView.setVisibility(View.GONE);
-                    keyboardTextView.setOnKeyListener(new View.OnKeyListener()
+                    characterDisplayView.setId(keyboardInteractionViewId);
+                    characterDisplayView.setTextSize(24);
+                    characterDisplayView.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
+                    characterDisplayView.setLayoutParams(new ViewGroup.MarginLayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                    characterDisplayView.setHint("Type data to send");
+                    characterDisplayView.setImeOptions(EditorInfo.IME_ACTION_DONE);
+                    characterDisplayView.setFocusable(true);
+                    characterDisplayView.setFocusableInTouchMode(true);
+                    characterDisplayView.setVisibility(View.GONE);
+                    characterDisplayView.setOnKeyListener(new View.OnKeyListener()
                     {
                         @Override
                         public boolean onKey(View v, int keyCode, KeyEvent event)
                         {
-                            // TODO: this doesn't work as expected ->
-                            // the amount of times the user presses a character keycode in the soft keyboard on the edittext,
-                            // the amount times + 1 it takes before the keyListener starts registering the delete key event.
-
-                            // onKey gets called twice on a button press -> 1 for ACTION_DOWN, 2 for ACTION_UP
-                            if (event.getAction() == KeyEvent.ACTION_UP && keyCode == KeyEvent.KEYCODE_DEL)
+                            if (event.getAction() == KeyEvent.ACTION_UP)
                             {
-                                connectionThread.write(ServerCommands.BACKSPACE.toString());
+                                String sendValue;
+
+                                if (keyCode == KeyEvent.KEYCODE_DEL)
+                                {
+                                    sendValue = ServerCommands.BACKSPACE.toString();
+                                }
+                                else
+                                {
+                                    sendValue = String.valueOf((char)event.getUnicodeChar());
+                                }
+
+                                characterDisplayView.setText(sendValue);
+
+                                connectionThread.write(sendValue);
                             }
 
                             return true;
                         }
                     });
-                    keyboardTextView.addTextChangedListener(new TextWatcher()
-                    {
-                        @Override
-                        public void beforeTextChanged(CharSequence s, int start, int count, int after)
-                        {
-                        }
 
-                        @Override
-                        public void onTextChanged(CharSequence s, int start, int before, int count)
-                        {
-                        }
-
-                        @Override
-                        public void afterTextChanged(Editable s)
-                        {
-                            // TODO: revisit this function
-
-                            int count = s.length();
-
-                            if (count > previousTextCount)
-                            {
-                                connectionThread.write(s.subSequence(count - 1, count).toString());
-                            }
-
-                            previousTextCount = count;
-                        }
-                    });
-
-                    keyboardInteractionContainer.addView(keyboardTextView);
+                    keyboardInteractionContainer.addView(characterDisplayView);
 
                     keyboardInteractionInitiated = true;
                 }
@@ -661,10 +640,10 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
                         fadeInAnimation);
 
                 // grab the focus and show the keyboard
-                keyboardTextView.requestFocus();
+                characterDisplayView.requestFocus();
 
                 InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-                imm.showSoftInput(keyboardTextView, InputMethodManager.SHOW_IMPLICIT);
+                imm.showSoftInput(characterDisplayView, InputMethodManager.SHOW_IMPLICIT);
             }
         });
 

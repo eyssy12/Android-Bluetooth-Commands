@@ -2,10 +2,11 @@
 <manifest package="com.zagorapps.utilities_suite"
           xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <uses-permission android:name="android.permission.BLUETOOTH"/>
-    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"/>
-    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.CAMERA" />
 
     <application
         android:allowBackup="true"
@@ -44,6 +45,15 @@
         <activity
             android:name=".activities.prototypes.UdpConnectToServer"
             android:label="@string/title_activity_udp_connect_to_server"
+            android:parentActivityName=".activities.MainActivity"
+            android:theme="@style/AppTheme.NoActionBar">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.zagorapps.utilities_suite.activities.MainActivity"/>
+        </activity>
+        <activity
+            android:name=".activities.prototypes.ConnectoViaQrCode"
+            android:label="@string/title_activity_connecto_via_qr_code"
             android:parentActivityName=".activities.MainActivity"
             android:theme="@style/AppTheme.NoActionBar">
             <meta-data

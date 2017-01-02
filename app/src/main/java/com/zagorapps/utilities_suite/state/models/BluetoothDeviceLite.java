@@ -64,6 +64,16 @@ public class BluetoothDeviceLite implements Parcelable
         this.identity = UUID.randomUUID().toString();
     }
 
+    public BluetoothDeviceLite(String address, String name)
+    {
+        this.address = address;
+        this.name = name;
+        this.bondState = -1;
+        this.deviceType = -1;
+
+        this.identity = UUID.randomUUID().toString();
+    }
+
     protected BluetoothDeviceLite(Parcel in)
     {
         identity = in.readString();

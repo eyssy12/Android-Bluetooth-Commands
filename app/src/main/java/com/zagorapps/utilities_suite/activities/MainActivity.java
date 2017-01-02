@@ -21,6 +21,7 @@ import android.widget.ProgressBar;
 
 import com.zagorapps.utilities_suite.R;
 import com.zagorapps.utilities_suite.activities.deviceinteraction.DeviceInteractionActivity;
+import com.zagorapps.utilities_suite.activities.prototypes.ConnectoViaQrCode;
 import com.zagorapps.utilities_suite.activities.prototypes.UdpConnectToServer;
 import com.zagorapps.utilities_suite.adapters.BluetoothDeviceAdapter;
 import com.zagorapps.utilities_suite.custom.EmptyRecyclerView;
@@ -35,7 +36,8 @@ public class MainActivity extends AppCompatActivity
 {
     public static final int REQUEST_ENABLE_BT = 100,
         REQUEST_CONNECTION_FAILED_TO_DEVICE = REQUEST_ENABLE_BT + 1,
-        REQUEST_START_DEVICE_INTERACTION = REQUEST_CONNECTION_FAILED_TO_DEVICE + 1;
+        REQUEST_START_DEVICE_INTERACTION = REQUEST_CONNECTION_FAILED_TO_DEVICE + 1,
+        REQUEST_QR_SCANNER = REQUEST_START_DEVICE_INTERACTION + 1;
 
     private static String TITLE_FORMAT;
 
@@ -82,6 +84,17 @@ public class MainActivity extends AppCompatActivity
                 Intent intent = new Intent(MainActivity.this, UdpConnectToServer.class);
 
                 MainActivity.this.startActivity(intent);
+            }
+        });
+
+        Button button2 = (Button) mainContainerView.findViewById(R.id.toolbar_test2_button);
+        button2.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v)
+            {
+                Intent intent = new Intent(MainActivity.this, ConnectoViaQrCode.class);
+
+                MainActivity.this.startActivityForResult(intent, REQUEST_QR_SCANNER);
             }
         });
 
@@ -203,6 +216,20 @@ public class MainActivity extends AppCompatActivity
             else if (resultCode == RESULT_CANCELED)
             {
                 btnDiscover.setText(resources.getString(R.string.enable_bluetooth));
+            }
+        }
+        else if (requestCode == REQUEST_QR_SCANNER)
+        {
+            if (resultCode == RESULT_OK)
+            {
+                String[] split = data.getStringExtra("qr_result").split("-");
+
+                BluetoothDeviceLite device = new BluetoothDeviceLite(split[1], split[0]);
+
+                Intent intent = new Intent(this, DeviceInteractionActivity.class);
+                intent.putExtra(DeviceInteractionActivity.DEVICE_KEY, device);
+
+                this.startActivityForResult(intent, MainActivity.REQUEST_START_DEVICE_INTERACTION);
             }
         }
         else if (requestCode == REQUEST_START_DEVICE_INTERACTION)
