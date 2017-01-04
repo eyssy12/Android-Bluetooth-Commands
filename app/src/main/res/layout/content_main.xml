@@ -40,7 +40,7 @@
             <Button
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/do_device_discovery"
+                android:text="@string/action_discover_devices"
                 android:textAppearance="?android:attr/textAppearanceLargeInverse"
                 android:id="@+id/btn_discovery"
                 android:background="?android:attr/selectableItemBackground"/>

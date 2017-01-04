@@ -9,6 +9,11 @@ import android.support.annotation.NonNull;
  */
 public class ActivityUtils
 {
+    public static void simpleStartActivityForResult(@NonNull Activity activity, @NonNull Class<?> activityToStart, int requestCode)
+    {
+        activity.startActivityForResult(new Intent(activity, activityToStart), requestCode);
+    }
+
     public static void finish(@NonNull Activity activity, int resultCode)
     {
         ActivityUtils.finish(activity, resultCode, null);

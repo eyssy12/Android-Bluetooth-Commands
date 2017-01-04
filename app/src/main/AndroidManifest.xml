@@ -52,8 +52,8 @@
                 android:value="com.zagorapps.utilities_suite.activities.MainActivity"/>
         </activity>
         <activity
-            android:name=".activities.prototypes.ConnectoViaQrCode"
-            android:label="@string/title_activity_connecto_via_qr_code"
+            android:name=".activities.QrCodeScannerActivity"
+            android:label="@string/title_activity_qr_code_scanner"
             android:parentActivityName=".activities.MainActivity"
             android:theme="@style/AppTheme.NoActionBar">
             <meta-data

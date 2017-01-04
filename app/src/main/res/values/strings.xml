@@ -1,22 +1,29 @@
 <resources>
+    
     <string name="app_name">Discovery</string>
+    
+    <!-- Action -->
     <string name="action_settings">Settings</string>
+    <string name="action_connect_using_qr_code">Launch QR Code Scanner</string>
     <string name="action_clear_preferences">Clear Preferences</string>
     <string name="action_clear_bonded_devices">Clear Devices</string>
-    <string name="do_device_discovery">Discover devices</string>
-    <string name="cancel_device_discovery">Cancel discovery</string>
-    <string name="enable_bluetooth">Enable Bluetooth</string>
-    <string name="bluetooth_unsupported_device_message">Bluetooth is not supported on this device</string>
-    <string name="discovery_activity_default_title">Devices</string>
-    <string name="discovery_activity_discovering_message">Discovering...</string>
-    <string name="title_activity_device_interaction">Controls</string>
-    <string name="title_activity_interaction_settings">InteractionSettingsActivity</string>
-    <string name="title_activity_udp_connect_to_server">UdpConnectToServer</string>
+    <string name="action_discover_devices">Discover Devices</string>
+    <string name="action_cancel_device_discovery">Cancel discovery</string>
+    <string name="action_enable_bluetooth">Enable Bluetooth</string>
+    <string name="action_tap_microphone">Tap on microphone to speak</string>
 
-    <string name="hello_world">Hello world!</string>
-    <string name="speech_prompt">Say something&#8230;</string>
-    <string name="speech_not_supported">Sorry! Your device doesn\'t support speech input</string>
-    <string name="tap_on_mic">Tap on mic to speak</string>
-    <string name="title_activity_connecto_via_qr_code">ConnectoViaQrCode</string>
+    <!-- Messages -->
+    <string name="message_bluetooth_unsupported">Bluetooth is not supported on this device</string>
+    <string name="message_discovery_activity_discovering">Discovering…</string>
+    <string name="message_speech_not_supported">Sorry! Your device does not support speech input</string>
+    <string name="message_prompt_speech">Say something&#8230;</string>
+    <string name="message_bluetooth_turning_on">Turning on Bluetooth</string>
+
+    <!-- Titles -->
+    <string name="title_activity_device_interaction">Controls</string>
+    <string name="title_activity_qr_code_scanner">QR Code Scanner</string>
+    <string name="title_activity_interaction_settings">Interaction Settings</string>
+    <string name="title_activity_udp_connect_to_server">UdpConnectToServer</string>
+    <string name="title_discovery_activity_default">Devices</string>
 
 </resources>

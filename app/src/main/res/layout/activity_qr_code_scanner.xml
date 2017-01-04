@@ -2,7 +2,7 @@
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    tools:context="com.zagorapps.utilities_suite.activities.prototypes.ConnectoViaQrCode"
+    tools:context="com.zagorapps.utilities_suite.activities.QrCodeScannerActivity"
     android:fitsSystemWindows="true"
     android:id="@+id/scannerContainer"
     android:orientation="horizontal"
