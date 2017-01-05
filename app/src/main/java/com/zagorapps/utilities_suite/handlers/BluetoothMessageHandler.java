@@ -22,7 +22,7 @@ public class BluetoothMessageHandler extends Handler
     @Override
     public void handleMessage(Message msg)
     {
-        String data = new String((byte[])msg.obj);
+        String data = new String((byte[]) msg.obj);
         data = data.trim();
 
         if (msg.what == BluetoothConnectionThread.MESSAGE_READ)

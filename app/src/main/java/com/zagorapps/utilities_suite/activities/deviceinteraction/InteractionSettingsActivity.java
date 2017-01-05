@@ -36,7 +36,7 @@ public class InteractionSettingsActivity extends Activity implements View.OnClic
         mouseSensitivitySeekBar = (SeekBar) findViewById(R.id.mouse_sensitivity_seekbar);
         mouseSensitivitySeekBar.setMax(10);
         mouseSensitivitySeekBar.incrementProgressBy(1);
-        mouseSensitivitySeekBar.setProgress((int)mouseSensitivity * 10);
+        mouseSensitivitySeekBar.setProgress((int) mouseSensitivity * 10);
         mouseSensitivityValueTextView.setText(String.valueOf(mouseSensitivity));
 
         mouseSensitivitySeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener()

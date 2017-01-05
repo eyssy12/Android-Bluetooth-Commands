@@ -29,12 +29,7 @@ public class TabbedViewPager
     private InteractionTab defaultTab;
     private ViewPager.OnPageChangeListener changeListener;
 
-    public TabbedViewPager(
-        Context context,
-        View parentView,
-        ViewPager.OnPageChangeListener changeListener,
-        Pair<Integer, Integer> viewPagerTabLayoutResIds,
-        List<TabPageMetadata> inflatablePageMetadata)
+    public TabbedViewPager(Context context, View parentView, ViewPager.OnPageChangeListener changeListener, Pair<Integer, Integer> viewPagerTabLayoutResIds, List<TabPageMetadata> inflatablePageMetadata)
     {
         this.context = context;
         this.parentView = parentView;

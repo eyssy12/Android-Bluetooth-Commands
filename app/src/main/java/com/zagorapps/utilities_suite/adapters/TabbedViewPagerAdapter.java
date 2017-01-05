@@ -65,7 +65,7 @@ public class TabbedViewPagerAdapter extends PagerAdapter
     public void destroyItem(ViewGroup container, int position, Object object)
     {
         // no need to destroy the item since there should only be a maximum of 3-4 tabs
-       // container.removeView((View) object);
+        // container.removeView((View) object);
     }
 
     public View getViewByInteractionTab(InteractionTab requested)

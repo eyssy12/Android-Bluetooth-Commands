@@ -19,10 +19,7 @@ import com.zagorapps.utilities_suite.threading.BluetoothConnectionThread;
 /**
  * Created by eyssy on 01/09/2016.
  */
-public class BluetoothGestureEventHandler implements
-        GestureDetector.OnGestureListener,
-        GestureDetector.OnDoubleTapListener,
-        IHandler
+public class BluetoothGestureEventHandler implements GestureDetector.OnGestureListener, GestureDetector.OnDoubleTapListener, IHandler
 {
     private MessageBuilder messageBuilder;
 
@@ -33,7 +30,9 @@ public class BluetoothGestureEventHandler implements
 
     private float mouseSensitivity;
     
-    public BluetoothGestureEventHandler(@NonNull Context context, @NonNull BluetoothConnectionThread connectionThread, float mouseSensitivity)
+    public BluetoothGestureEventHandler(
+            @NonNull Context context,
+            @NonNull BluetoothConnectionThread connectionThread, float mouseSensitivity)
     {
         this.connectionThread = connectionThread;
         this.context = context;
@@ -91,8 +90,7 @@ public class BluetoothGestureEventHandler implements
     }
 
     @Override
-    public boolean onFling(MotionEvent event1, MotionEvent event2,
-                           float velocityX, float velocityY)
+    public boolean onFling(MotionEvent event1, MotionEvent event2, float velocityX, float velocityY)
     {
         return true;
     }

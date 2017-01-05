@@ -22,11 +22,9 @@ import java.lang.reflect.Method;
  */
 public class BluetoothDeviceAdapter extends RecyclerViewAdapterBase<BluetoothDeviceLite, BluetoothDeviceViewHolder>
 {
-    private static final String THIS_CLASS_NAME = "(" + BluetoothDeviceAdapter.class.getSimpleName() + ")",
-        LEFT_ARROW = " -> ",
-        UNPAIR_DEVICE_TAG = THIS_CLASS_NAME + LEFT_ARROW + "DevUnpair";
+    private static final String THIS_CLASS_NAME = "(" + BluetoothDeviceAdapter.class.getSimpleName() + ")", LEFT_ARROW = " -> ", UNPAIR_DEVICE_TAG = THIS_CLASS_NAME + LEFT_ARROW + "DevUnpair";
 
-    private static final String[] ITEMS = new String[] { "Connect", "Remove from list", "Unpair" };
+    private static final String[] ITEMS = new String[]{"Connect", "Remove from list", "Unpair"};
 
     public BluetoothDeviceAdapter(Context context, View parentView)
     {
@@ -57,54 +55,49 @@ public class BluetoothDeviceAdapter extends RecyclerViewAdapterBase<BluetoothDev
             public void onClick(View v)
             {
                 AlertDialog.Builder builder = new AlertDialog.Builder(context);
-                AlertDialog dialog = builder
-                    .setTitle("Options")
-                    .setIcon(R.drawable.options)
-                    .setItems(ITEMS, new DialogInterface.OnClickListener()
+                AlertDialog dialog = builder.setTitle("Options").setIcon(R.drawable.options).setItems(ITEMS, new DialogInterface.OnClickListener()
+                {
+                    // TODO: change this to setAdapter instead to customise the dialog better with icons
+
+                    public void onClick(DialogInterface dialog, int which)
                     {
-                        // TODO: change this to setAdapter instead to customise the dialog better with icons
-
-                        public void onClick(DialogInterface dialog, int which)
+                        if (which == 0)
                         {
-                            if (which == 0)
+                            Intent intent = new Intent(context, DeviceInteractionActivity.class);
+                            intent.putExtra(DeviceInteractionActivity.DEVICE_KEY, item);
+
+                            Activity activityFromContext = (Activity) context;
+
+                            activityFromContext.startActivityForResult(intent, MainActivity.REQUEST_START_DEVICE_INTERACTION);
+                        }
+                        else if (which == 2)
+                        {
+                            try
                             {
-                                Intent intent = new Intent(context, DeviceInteractionActivity.class);
-                                intent.putExtra(DeviceInteractionActivity.DEVICE_KEY, item);
+                                // TODO: how to invoke unpairing on both sides
+                                // as it is now, it only unpairs from this side, the server side still considers this device to be paired
+                                Method m = item.getClass().getMethod("removeBond", (Class[]) null);
 
-                                Activity activityFromContext = (Activity)context;
-
-                                activityFromContext.startActivityForResult(intent, MainActivity.REQUEST_START_DEVICE_INTERACTION);
+                                m.invoke(item, (Object[]) null);
                             }
-                            else if (which == 2)
+                            catch (Exception e)
                             {
-                                try
-                                {
-                                    // TODO: how to invoke unpairing on both sides
-                                    // as it is now, it only unpairs from this side, the server side still considers this device to be paired
-                                    Method m = item.getClass().getMethod("removeBond", (Class[]) null);
-
-                                    m.invoke(item, (Object[]) null);
-                                }
-                                catch (Exception e)
-                                {
-                                    Log.e(UNPAIR_DEVICE_TAG, e.getMessage());
-                                }
-                            }
-                            else if (which == 1)
-                            {
-                                dialog.dismiss();
-                                remove(item);
+                                Log.e(UNPAIR_DEVICE_TAG, e.getMessage());
                             }
                         }
-                    })
-                    .setNegativeButton("Dismiss", new DialogInterface.OnClickListener()
-                    {
-                        public void onClick(DialogInterface dialog, int id)
+                        else if (which == 1)
                         {
                             dialog.dismiss();
+                            remove(item);
                         }
-                    })
-                    .create();
+                    }
+                }).setNegativeButton("Dismiss", new DialogInterface.OnClickListener()
+                {
+                    public void onClick(DialogInterface dialog, int id)
+                    {
+                        dialog.dismiss();
+                    }
+                }).create();
 
                 dialog.show();
             }

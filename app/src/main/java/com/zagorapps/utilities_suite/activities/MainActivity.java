@@ -38,10 +38,7 @@ import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity
 {
-    public static final int REQUEST_ENABLE_BT = 100,
-        REQUEST_CONNECTION_FAILED_TO_DEVICE = REQUEST_ENABLE_BT + 1,
-        REQUEST_START_DEVICE_INTERACTION = REQUEST_CONNECTION_FAILED_TO_DEVICE + 1,
-        REQUEST_QR_SCANNER = REQUEST_START_DEVICE_INTERACTION + 1;
+    public static final int REQUEST_ENABLE_BT = 100, REQUEST_CONNECTION_FAILED_TO_DEVICE = REQUEST_ENABLE_BT + 1, REQUEST_START_DEVICE_INTERACTION = REQUEST_CONNECTION_FAILED_TO_DEVICE + 1, REQUEST_QR_SCANNER = REQUEST_START_DEVICE_INTERACTION + 1;
 
     private static final int PERMISSION_REQUEST_CAMERA = 200;
 
@@ -171,7 +168,7 @@ public class MainActivity extends AppCompatActivity
 
     private void prepareAdapter()
     {
-        emptyRecyclerView = (EmptyRecyclerView)contentContainerView.findViewById(R.id.recycler_view_empty_support);
+        emptyRecyclerView = (EmptyRecyclerView) contentContainerView.findViewById(R.id.recycler_view_empty_support);
         emptyRecyclerView.setLayoutManager(new LinearLayoutManager(this));
 
         adapter = new BluetoothDeviceAdapter(this, emptyRecyclerView);
@@ -310,7 +307,11 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String permissions[], @NonNull int[] grantResults)
+    public void onRequestPermissionsResult(int requestCode,
+                                           @NonNull
+                                                   String permissions[],
+                                           @NonNull
+                                                   int[] grantResults)
     {
         switch (requestCode)
         {
