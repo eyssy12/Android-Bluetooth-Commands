@@ -1,9 +1,13 @@
 package com.zagorapps.utilities_suite.activities.deviceinteraction;
 
 import android.app.ProgressDialog;
+import android.bluetooth.BluetoothAdapter;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.os.BatteryManager;
 import android.os.Bundle;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
@@ -37,13 +41,16 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
+import com.google.gson.JsonObject;
 import com.squareup.picasso.Picasso;
 import com.zagorapps.utilities_suite.R;
 import com.zagorapps.utilities_suite.custom.TabbedViewPager;
 import com.zagorapps.utilities_suite.handlers.BluetoothGestureEventHandler;
 import com.zagorapps.utilities_suite.handlers.BluetoothMessageHandler;
 import com.zagorapps.utilities_suite.interfaces.OnBluetoothMessageListener;
-import com.zagorapps.utilities_suite.protocol.Commands;
+import com.zagorapps.utilities_suite.protocol.ClientCommands;
+import com.zagorapps.utilities_suite.protocol.Constants;
+import com.zagorapps.utilities_suite.protocol.MessageBuilder;
 import com.zagorapps.utilities_suite.protocol.ServerCommands;
 import com.zagorapps.utilities_suite.state.InteractionTab;
 import com.zagorapps.utilities_suite.state.models.BluetoothDeviceLite;
@@ -60,11 +67,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-public class DeviceInteractionActivity extends AppCompatActivity implements
-        OnBluetoothMessageListener
+public class DeviceInteractionActivity extends AppCompatActivity implements OnBluetoothMessageListener
 {
-    public static final String DEVICE_KEY = "device",
-            MOUSE_SENSITIVITY_KEY = "mouse_sensitivity";
+    public static final String DEVICE_KEY = "device", MOUSE_SENSITIVITY_KEY = "mouse_sensitivity";
 
     public static final int REQUEST_INTERACTION_SETTINGS = 100;
 
@@ -73,10 +78,11 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
     private static UUID SERVER_ENDPOINT = UUID.fromString("1f1aa577-32d6-4c59-b9a2-f262994783e9");
     private static float MOUSE_SENSITIVITY = DEFAULT_MOUSE_SENSITIVITY;
 
-    private int previousTextCount = 0;
     private int keyboardInteractionViewId;
     private boolean keyboardInteractionInitiated = false;
     private boolean doubleBackToExitPressedOnce = false;
+
+    private String myBluetoothName;
 
     // Parent View
     private View parentView;
@@ -85,8 +91,6 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
     private TabbedViewPager tabbedViewPager;
     private InteractionTab currentTab, previousTab;
     private Animation fadeInAnimation, fadeOutAnimation;
-
-    private String[] initialSyncData;
 
     // Mouse View
     private ProgressDialog progressDialog;
@@ -107,12 +111,18 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
     private ToggleButton muteButton;
     private ToggleButtonCheckedChangeListener muteButtonCheckedChangeListener;
 
+    // Specifics
     private BluetoothConnectionThread connectionThread;
     private BluetoothDeviceLite targetDevice;
     private BluetoothMessageHandler messageHandler;
     private BluetoothGestureEventHandler gestureHandler;
 
-    private boolean serverSyncupInitialised = false;
+    private String[] initialSyncData;
+    private boolean serverSyncUpInitialised = false;
+
+    private IntentFilter deviceChargeStateFilter;
+
+    private MessageBuilder messageBuilder;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -178,10 +188,10 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
                 inflater.inflate(R.menu.device_interaction_mouse_menu, menu);
 
                 // TODO: figure out animations
-//                MenuItem item;
-//                item = menu.findItem(R.id.action_interaction_settings);
-//                item.setActionView(R.layout.action_settings);
-//                item.getActionView().startAnimation(fadeInAnimation);
+                //                MenuItem item;
+                //                item = menu.findItem(R.id.action_interaction_settings);
+                //                item.setActionView(R.layout.action_settings);
+                //                item.getActionView().startAnimation(fadeInAnimation);
 
             case KEYBOARD:
                 inflater.inflate(R.menu.device_interaction_keyboard_menu, menu);
@@ -203,15 +213,16 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
         {
             if (doubleBackToExitPressedOnce)
             {
-                connectionThread.write(Commands.END_SESSION.toString());
+                JsonObject object = messageBuilder.getBaseObject();
+                object.addProperty(Constants.KEY_COMMAND, ClientCommands.END_SESSION.toString());
+
+                connectionThread.write(messageBuilder.toJson(object));
             }
             else
             {
                 this.doubleBackToExitPressedOnce = true;
 
-                SystemMessagingUtils.showToast(this,
-                        "Please click BACK again to exit",
-                        Toast.LENGTH_SHORT);
+                SystemMessagingUtils.showToast(this, "Please click BACK again to exit", Toast.LENGTH_SHORT);
 
                 RunnableUtils.ExecuteWithDelay(new Runnable()
                 {
@@ -226,6 +237,22 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
     }
 
     @Override
+    public void onPause()
+    {
+        unregisterReceiver(batteryStateReceiver);
+
+        super.onPause();
+    }
+
+    @Override
+    public void onResume()
+    {
+        super.onResume();
+
+        registerReceiver(batteryStateReceiver, deviceChargeStateFilter);
+    }
+
+    @Override
     public void onMessageRead(String message)
     {
         // TODO: implement JSON based messaging
@@ -235,8 +262,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
         }
         else if (message.equals("Permitted Process Running"))
         {
-            SystemMessagingUtils.showShortToast(this,
-                    "Unable to perform system command since more than one permitted process is running.");
+            SystemMessagingUtils.showShortToast(this, "Unable to perform system command since more than one permitted process is running.");
         }
         else if (message.equals("machine_locked"))
         {
@@ -250,13 +276,16 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
         {
             String[] data = message.split(":");
 
-            if (data[0].equals("SyncResponse"))
+            if (data[0].equals(Constants.VALUE_SYNC_RESPONSE))
             {
                 // TODO: return all data for the sync operation
 
-                this.connectionThread.write("SyncResponseAck");
+                JsonObject object = messageBuilder.getBaseObject();
+                object.addProperty(Constants.KEY_SYNC_STATE, Constants.VALUE_SYNC_RESPONSE_ACK);
 
-                if (!this.serverSyncupInitialised)
+                this.connectionThread.write(messageBuilder.toJson(object));
+
+                if (!this.serverSyncUpInitialised)
                 {
                     appBarLayout = (AppBarLayout) findViewById(R.id.app_bar_layout);
                     toolbar = (Toolbar) findViewById(R.id.toolbar);
@@ -270,7 +299,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
 
                     progressDialog.dismiss();
 
-                    this.serverSyncupInitialised = true;
+                    this.serverSyncUpInitialised = true;
 
                     ViewUtils.setViewAndChildrenVisibility(parentView, View.VISIBLE);
                 }
@@ -311,7 +340,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
     @Override
     public void onMessageSent(String message)
     {
-        if (message.equals(Commands.END_SESSION.toString()))
+        if (message.equals(ClientCommands.END_SESSION.toString()))
         {
             connectionThread.close();
         }
@@ -332,7 +361,10 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
     @Override
     public void onConnectionEstablished()
     {
-        this.connectionThread.write("SyncRequest");
+        JsonObject object = messageBuilder.getBaseObject();
+        object.addProperty(Constants.KEY_SYNC_STATE, Constants.VALUE_SYNC_REQUEST);
+
+        this.connectionThread.write(messageBuilder.toJson(object));
     }
 
     @Override
@@ -362,8 +394,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
         {
             if (resultCode == RESULT_OK)
             {
-                MOUSE_SENSITIVITY = data.getFloatExtra(MOUSE_SENSITIVITY_KEY,
-                        DEFAULT_MOUSE_SENSITIVITY);
+                MOUSE_SENSITIVITY = data.getFloatExtra(MOUSE_SENSITIVITY_KEY, DEFAULT_MOUSE_SENSITIVITY);
 
                 gestureHandler.setMouseSensitivity(MOUSE_SENSITIVITY);
             }
@@ -373,10 +404,8 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
     private void prepareVoiceRecogniser()
     {
         speechRecogniserIntent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-        speechRecogniserIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-        speechRecogniserIntent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE,
-                this.getPackageName());
+        speechRecogniserIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        speechRecogniserIntent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, this.getPackageName());
 
         speechRecogniser = SpeechRecognizer.createSpeechRecognizer(this);
         speechRecogniser.setRecognitionListener(new SpeechRecognitionListener());
@@ -384,22 +413,27 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
 
     private void prepareStatics()
     {
-        fadeInAnimation = AnimationUtils.loadAnimation(this, android.R.anim.fade_in);
-        fadeInAnimation.setInterpolator(new AccelerateInterpolator());
-        fadeInAnimation.setDuration(200);
+        this.fadeInAnimation = AnimationUtils.loadAnimation(this, android.R.anim.fade_in);
+        this.fadeInAnimation.setInterpolator(new AccelerateInterpolator());
+        this.fadeInAnimation.setDuration(200);
 
-        fadeOutAnimation = AnimationUtils.loadAnimation(this, android.R.anim.fade_out);
-        fadeOutAnimation.setInterpolator(new AccelerateInterpolator());
-        fadeOutAnimation.setDuration(200);
+        this.fadeOutAnimation = AnimationUtils.loadAnimation(this, android.R.anim.fade_out);
+        this.fadeOutAnimation.setInterpolator(new AccelerateInterpolator());
+        this.fadeOutAnimation.setDuration(200);
+
+        this.messageBuilder = MessageBuilder.DefaultInstance();
+
+        this.deviceChargeStateFilter = new IntentFilter();
+        this.deviceChargeStateFilter.addAction(Intent.ACTION_BATTERY_CHANGED);
+        this.deviceChargeStateFilter.addAction(Intent.ACTION_BATTERY_LOW);
+        this.deviceChargeStateFilter.addAction(Intent.ACTION_BATTERY_OKAY);
+
+        this.registerReceiver(this.batteryStateReceiver, this.deviceChargeStateFilter);
     }
 
     private void prepareMachineAlertDialog()
     {
-        machineLockedDialog = new AlertDialog.Builder(this)
-                .setTitle("Machine Locked")
-                .setIcon(R.drawable.ic_phonelink_lock_black_48dp)
-                .setCancelable(false)
-                .create();
+        this.machineLockedDialog = new AlertDialog.Builder(this).setTitle("Machine Locked").setIcon(R.drawable.ic_phonelink_lock_black_48dp).setCancelable(false).create();
 
         // TODO: this is not working, should investigate
         WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
@@ -430,22 +464,14 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
 
     private void prepareTabbedView()
     {
-        Pair<Integer, Integer> viewPagerTabLayoutResIds = new Pair<>(
-                R.id.device_interaction_view_pager,
-                R.id.device_interaction_tabs);
+        Pair<Integer, Integer> viewPagerTabLayoutResIds = new Pair<>(R.id.device_interaction_view_pager, R.id.device_interaction_tabs);
 
         List<TabPageMetadata> inflatablePageMetadata = new ArrayList<>();
-        inflatablePageMetadata.add(new TabPageMetadata(InteractionTab.MOUSE,
-                R.layout.content_device_interaction_mouse,
-                R.drawable.ic_mouse_white_48dp));
+        inflatablePageMetadata.add(new TabPageMetadata(InteractionTab.MOUSE, R.layout.content_device_interaction_mouse, R.drawable.ic_mouse_white_48dp));
         // TODO: will most likely re-add this back to allow functionality for some F1-12 keys and more
         inflatablePageMetadata.add(new TabPageMetadata(InteractionTab.KEYBOARD, R.layout.content_device_interaction_keyboard, R.drawable.ic_keyboard_white_48dp));
-        inflatablePageMetadata.add(new TabPageMetadata(InteractionTab.SYSTEM,
-                R.layout.content_device_interaction_system,
-                R.drawable.ic_assignment_white_48dp));
-        inflatablePageMetadata.add(new TabPageMetadata(InteractionTab.VOICE,
-                R.layout.content_device_interaction_voice,
-                R.drawable.ic_record_voice_over_white_48dp));
+        inflatablePageMetadata.add(new TabPageMetadata(InteractionTab.SYSTEM, R.layout.content_device_interaction_system, R.drawable.ic_assignment_white_48dp));
+        inflatablePageMetadata.add(new TabPageMetadata(InteractionTab.VOICE, R.layout.content_device_interaction_voice, R.drawable.ic_record_voice_over_white_48dp));
 
         ViewPager.OnPageChangeListener changeListener = new ViewPager.OnPageChangeListener()
         {
@@ -481,11 +507,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
             }
         };
 
-        tabbedViewPager = new TabbedViewPager(this,
-                parentView,
-                changeListener,
-                viewPagerTabLayoutResIds,
-                inflatablePageMetadata);
+        tabbedViewPager = new TabbedViewPager(this, parentView, changeListener, viewPagerTabLayoutResIds, inflatablePageMetadata);
 
         currentTab = tabbedViewPager.getDefaultTab();
         previousTab = InteractionTab.NOT_SET;
@@ -493,14 +515,12 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
 
     private void prepareBluetoothHandlers()
     {
+        myBluetoothName = BluetoothAdapter.getDefaultAdapter().getName();
+
         messageHandler = new BluetoothMessageHandler(this);
         // TODO: pass down the password that will create the server endpoint out of it as a UUID
-        connectionThread = new BluetoothConnectionThread(SERVER_ENDPOINT,
-                targetDevice,
-                messageHandler);
-        gestureHandler = new BluetoothGestureEventHandler(this,
-                connectionThread,
-                MOUSE_SENSITIVITY);
+        connectionThread = new BluetoothConnectionThread(SERVER_ENDPOINT, targetDevice, messageHandler);
+        gestureHandler = new BluetoothGestureEventHandler(this, connectionThread, MOUSE_SENSITIVITY);
     }
 
     private void fadeOutPreviousTab(Menu menu)
@@ -523,20 +543,16 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
 
     private void initialiseMouseAndKeyboardInteractions()
     {
-        final RelativeLayout mouseContainerView = (RelativeLayout) tabbedViewPager.getTabbedAdapter()
-                                                                                  .getViewByInteractionTab(
-                                                                                          InteractionTab.MOUSE);
+        final RelativeLayout mouseContainerView = (RelativeLayout) tabbedViewPager.getTabbedAdapter().getViewByInteractionTab(InteractionTab.MOUSE);
         final View mouseInteractionContainer = mouseContainerView.findViewById(R.id.mouse_interaction_container);
         final View keyboardInteractionInitiatorContainer = mouseContainerView.findViewById(R.id.keyboard_interaction_initiator_container);
-        final LinearLayout keyboardInteractionContainer = (LinearLayout) mouseContainerView.findViewById(
-                R.id.keyboard_interaction_container);
+        final LinearLayout keyboardInteractionContainer = (LinearLayout) mouseContainerView.findViewById(R.id.keyboard_interaction_container);
 
         this.textView = (TextView) mouseInteractionContainer.findViewById(R.id.received_data_text);
         this.touchPadArea = (ImageView) mouseInteractionContainer.findViewById(R.id.touchpad_area);
         this.touchPadArea.setEnabled(false);
 
-        final ImageButton keyboardBtn = (ImageButton) keyboardInteractionInitiatorContainer.findViewById(
-                R.id.keyboard_image_btn);
+        final ImageButton keyboardBtn = (ImageButton) keyboardInteractionInitiatorContainer.findViewById(R.id.keyboard_image_btn);
 
         final List<View> mouseTouchPadInteractiveViews = new ArrayList<>();
         mouseTouchPadInteractiveViews.add(this.appBarLayout);
@@ -551,9 +567,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
             public void onClick(View v)
             {
                 // hide all the current views
-                ViewUtils.setViewAndChildrenVisibility(mouseTouchPadInteractiveViews,
-                        View.GONE,
-                        fadeOutAnimation);
+                ViewUtils.setViewAndChildrenVisibility(mouseTouchPadInteractiveViews, View.GONE, fadeOutAnimation);
 
                 final TextView characterDisplayView;
                 if (keyboardInteractionInitiated)
@@ -575,15 +589,9 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
                                     @Override
                                     public void run()
                                     {
-                                        ViewUtils.setViewAndChildrenVisibility(
-                                                mouseTouchPadInteractiveViews,
-                                                View.VISIBLE,
-                                                fadeInAnimation);
+                                        ViewUtils.setViewAndChildrenVisibility(mouseTouchPadInteractiveViews, View.VISIBLE, fadeInAnimation);
 
-                                        ViewUtils.setViewAndChildrenVisibility(
-                                                keyboardInteractionContainer,
-                                                View.GONE,
-                                                fadeOutAnimation);
+                                        ViewUtils.setViewAndChildrenVisibility(keyboardInteractionContainer, View.GONE, fadeOutAnimation);
                                     }
                                 }, 250);
                             }
@@ -618,12 +626,15 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
                                 }
                                 else
                                 {
-                                    sendValue = String.valueOf((char)event.getUnicodeChar());
+                                    sendValue = String.valueOf((char) event.getUnicodeChar());
                                 }
 
                                 characterDisplayView.setText(sendValue);
 
-                                connectionThread.write(sendValue);
+                                JsonObject object = messageBuilder.getBaseObject();
+                                object.addProperty(Constants.KEY_COMMAND, sendValue);
+
+                                connectionThread.write(messageBuilder.toJson(object));
                             }
 
                             return true;
@@ -635,9 +646,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
                     keyboardInteractionInitiated = true;
                 }
 
-                ViewUtils.setViewAndChildrenVisibility(keyboardInteractionContainer,
-                        View.VISIBLE,
-                        fadeInAnimation);
+                ViewUtils.setViewAndChildrenVisibility(keyboardInteractionContainer, View.VISIBLE, fadeInAnimation);
 
                 // grab the focus and show the keyboard
                 characterDisplayView.requestFocus();
@@ -647,25 +656,21 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
             }
         });
 
-        Picasso.with(DeviceInteractionActivity.this)
-               .load(R.drawable.touchpad_surface)
-               .fit()
-               .into(touchPadArea, new com.squareup.picasso.Callback()
-               {
-                   @Override
-                   public void onSuccess()
-                   {
-                       touchPadArea.setEnabled(true);
-                   }
+        Picasso.with(DeviceInteractionActivity.this).load(R.drawable.touchpad_surface).fit().into(touchPadArea, new com.squareup.picasso.Callback()
+        {
+            @Override
+            public void onSuccess()
+            {
+                touchPadArea.setEnabled(true);
+            }
 
-                   @Override
-                   public void onError()
-                   {
-                       textView.setText("Error loading touch pad background"); // TODO: strings.xml
-                       SystemMessagingUtils.showShortToast(DeviceInteractionActivity.this,
-                               "Error loading touch pad background");
-                   }
-               });
+            @Override
+            public void onError()
+            {
+                textView.setText("Error loading touch pad background"); // TODO: strings.xml
+                SystemMessagingUtils.showShortToast(DeviceInteractionActivity.this, "Error loading touch pad background");
+            }
+        });
 
         touchPadArea.setOnTouchListener(new View.OnTouchListener()
         {
@@ -679,16 +684,14 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
 
     private void initialiseSpecialKeyboardInteractions()
     {
-        View keyboardContainerView = tabbedViewPager.getTabbedAdapter()
-                                                    .getViewByInteractionTab(InteractionTab.KEYBOARD);
+        View keyboardContainerView = tabbedViewPager.getTabbedAdapter().getViewByInteractionTab(InteractionTab.KEYBOARD);
     }
 
     private void initialiseSystemInteractions()
     {
-        View systemContainerView = tabbedViewPager.getTabbedAdapter()
-                                                  .getViewByInteractionTab(InteractionTab.SYSTEM);
+        View systemContainerView = tabbedViewPager.getTabbedAdapter().getViewByInteractionTab(InteractionTab.SYSTEM);
 
-        this.systemVolume = (SeekBar)systemContainerView.findViewById(R.id.seekBar_systemVolume);
+        this.systemVolume = (SeekBar) systemContainerView.findViewById(R.id.seekBar_systemVolume);
         this.systemVolume.setProgress(Integer.valueOf(initialSyncData[1]));
         this.systemVolumeChangeListener = new SeekBarChangeListener();
         this.systemVolume.setOnSeekBarChangeListener(systemVolumeChangeListener);
@@ -701,8 +704,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
 
     private void initialiseVoiceInteractions()
     {
-        final View voiceContainerView = tabbedViewPager.getTabbedAdapter()
-                                                       .getViewByInteractionTab(InteractionTab.VOICE);
+        final View voiceContainerView = tabbedViewPager.getTabbedAdapter().getViewByInteractionTab(InteractionTab.VOICE);
         txtSpeechInput = (TextView) voiceContainerView.findViewById(R.id.txtSpeechInput);
         btnSpeak = (ImageButton) voiceContainerView.findViewById(R.id.btnSpeak);
 
@@ -732,28 +734,76 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
         @Override
         public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser)
         {
-            connectionThread.write("vol:" + progress);
+            JsonObject object = messageBuilder.getBaseObject();
+            object.addProperty(Constants.KEY_VOLUME, progress);
+
+            connectionThread.write(messageBuilder.toJson(object));
         }
 
         @Override
         public void onStartTrackingTouch(SeekBar seekBar)
         {
-
         }
 
         @Override
         public void onStopTrackingTouch(SeekBar seekBar)
         {
-
         }
     }
+
+    private final BroadcastReceiver batteryStateReceiver = new BroadcastReceiver()
+    {
+        @Override
+        public void onReceive(Context context, Intent intent)
+        {
+            if (serverSyncUpInitialised)
+            {
+                String action = intent.getAction();
+
+                JsonObject json = messageBuilder.getBaseObject();
+
+                if (action.equals(Intent.ACTION_BATTERY_CHANGED))
+                {
+                    int status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
+                    boolean isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL;
+
+                    if (!isCharging)
+                    {
+                        json.addProperty(Constants.KEY_BATTERY_CHARGING, false);
+                    }
+                    else
+                    {
+                        int chargePlug = intent.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1);
+                        boolean isUsbCharge = chargePlug == BatteryManager.BATTERY_PLUGGED_USB;
+
+                        json.addProperty(Constants.KEY_BATTERY_CHARGING, true);
+                        json.addProperty(Constants.KEY_BATTERY_CHARGE_TYPE, (isUsbCharge ? Constants.VALUE_CHARGE_TYPE_USB : Constants.VALUE_CHARGE_TYPE_AC));
+                    }
+                }
+                else if (action.equals(Intent.ACTION_BATTERY_LOW))
+                {
+                    json.addProperty(Constants.KEY_BATTERY_STATE, Constants.VALUE_CHARGE_LOW);
+                }
+                else if (action.equals(Intent.ACTION_BATTERY_OKAY))
+                {
+                    json.addProperty(Constants.KEY_BATTERY_STATE, Constants.VALUE_CHARGE_OK);
+                }
+
+                connectionThread.write(messageBuilder.toJson(json));
+            }
+        }
+    };
 
     protected class ToggleButtonCheckedChangeListener implements CompoundButton.OnCheckedChangeListener
     {
         @Override
         public void onCheckedChanged(CompoundButton buttonView, boolean isChecked)
         {
-            connectionThread.write("vol:" + isChecked); // true for mute
+            JsonObject json = messageBuilder.getBaseObject();
+
+            json.addProperty(Constants.KEY_VOLUME, String.valueOf(isChecked));
+
+            connectionThread.write(messageBuilder.toJson(json)); // true for mute
         }
     }
 
@@ -767,7 +817,6 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
         @Override
         public void onBufferReceived(byte[] buffer)
         {
-
         }
 
         @Override
@@ -784,13 +833,11 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
         @Override
         public void onEvent(int eventType, Bundle params)
         {
-
         }
 
         @Override
         public void onPartialResults(Bundle partialResults)
         {
-
         }
 
         @Override
@@ -808,7 +855,10 @@ public class DeviceInteractionActivity extends AppCompatActivity implements
                 String recognisedText = matches.get(0);
 
                 txtSpeechInput.setText(recognisedText);
-                connectionThread.write(recognisedText);
+
+                JsonObject object = messageBuilder.getBaseObject();
+                object.addProperty(Constants.KEY_VOICE, recognisedText);
+                connectionThread.write(messageBuilder.toJson(object));
             }
         }
 

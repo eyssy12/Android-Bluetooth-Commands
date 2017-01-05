@@ -3,14 +3,16 @@ package com.zagorapps.utilities_suite.handlers;
 import android.content.Context;
 import android.support.annotation.NonNull;
 import android.support.v4.view.GestureDetectorCompat;
-import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 
+import com.google.gson.JsonObject;
 import com.zagorapps.utilities_suite.enumerations.ConnectionState;
 import com.zagorapps.utilities_suite.enumerations.Coordinate;
 import com.zagorapps.utilities_suite.interfaces.IHandler;
-import com.zagorapps.utilities_suite.protocol.Commands;
+import com.zagorapps.utilities_suite.protocol.ClientCommands;
+import com.zagorapps.utilities_suite.protocol.Constants;
+import com.zagorapps.utilities_suite.protocol.MessageBuilder;
 import com.zagorapps.utilities_suite.state.models.MotionDistance;
 import com.zagorapps.utilities_suite.threading.BluetoothConnectionThread;
 
@@ -22,7 +24,7 @@ public class BluetoothGestureEventHandler implements
         GestureDetector.OnDoubleTapListener,
         IHandler
 {
-    private static final String DEBUG_TAG = "BluetoothGestureHandler";
+    private MessageBuilder messageBuilder;
 
     private Context context;
     private BluetoothConnectionThread connectionThread;
@@ -36,6 +38,8 @@ public class BluetoothGestureEventHandler implements
         this.connectionThread = connectionThread;
         this.context = context;
         this.mouseSensitivity = mouseSensitivity;
+
+        this.messageBuilder = MessageBuilder.DefaultInstance();
     }
 
     public void setMouseSensitivity(float sensitivity)
@@ -70,17 +74,12 @@ public class BluetoothGestureEventHandler implements
     {
         MotionDistance distances = new MotionDistance(-distanceX, -distanceY); // 2 decimal places
 
-//        if (distances.shouldSend())
-//        {
-//
-//        }
+        JsonObject object = messageBuilder.getBaseObject();
+        object.addProperty(Constants.KEY_MOTION, true);
+        object.addProperty(Constants.KEY_MOTION_X, MotionDistance.increaseMouseMovement(distances.getDistanceX(), 1, Coordinate.X, 1));
+        object.addProperty(Constants.KEY_MOTION_Y, MotionDistance.increaseMouseMovement(distances.getDistanceY(), 1, Coordinate.Y, 1));
 
-        String payload =
-                (MotionDistance.increaseMouseMovement(distances.getDistanceX(), 1, Coordinate.X, 1)) +
-                ":" +
-                (MotionDistance.increaseMouseMovement(distances.getDistanceY(), 1, Coordinate.Y, 1));
-
-        connectionThread.write(payload);
+        connectionThread.write(messageBuilder.toJson(object));
 
         return true;
     }
@@ -88,8 +87,6 @@ public class BluetoothGestureEventHandler implements
     @Override
     public boolean onDown(MotionEvent event)
     {
-        Log.d(DEBUG_TAG,"onDown: " + event.toString());
-
         return true;
     }
 
@@ -97,37 +94,36 @@ public class BluetoothGestureEventHandler implements
     public boolean onFling(MotionEvent event1, MotionEvent event2,
                            float velocityX, float velocityY)
     {
-        Log.d(DEBUG_TAG, "onFling: " + event1.toString()+event2.toString());
-
         return true;
     }
 
     @Override
     public void onLongPress(MotionEvent event)
     {
-        Log.d(DEBUG_TAG, "onLongPress: " + event.toString());
-        connectionThread.write(Commands.RIGHT_CLICK.toString());
+        JsonObject object = messageBuilder.getBaseObject();
+        object.addProperty(Constants.KEY_COMMAND, ClientCommands.RIGHT_CLICK.toString());
+
+        connectionThread.write(messageBuilder.toJson(object));
     }
 
     @Override
     public void onShowPress(MotionEvent event)
     {
-        Log.d(DEBUG_TAG, "onShowPress: " + event.toString());
     }
 
     @Override
     public boolean onSingleTapUp(MotionEvent event)
     {
-        Log.d(DEBUG_TAG, "onSingleTapUp: " + event.toString());
-
         return true;
     }
 
     @Override
     public boolean onDoubleTap(MotionEvent event)
     {
-        Log.d(DEBUG_TAG, "onDoubleTap: " + event.toString());
-        connectionThread.write(Commands.DOUBLE_TAP.toString());
+        JsonObject object = messageBuilder.getBaseObject();
+        object.addProperty(Constants.KEY_COMMAND, ClientCommands.DOUBLE_TAP.toString());
+
+        connectionThread.write(messageBuilder.toJson(object));
 
         return true;
     }
@@ -135,16 +131,16 @@ public class BluetoothGestureEventHandler implements
     @Override
     public boolean onDoubleTapEvent(MotionEvent event)
     {
-        Log.d(DEBUG_TAG, "onDoubleTapEvent: " + event.toString());
-
         return true;
     }
 
     @Override
     public boolean onSingleTapConfirmed(MotionEvent event)
     {
-        Log.d(DEBUG_TAG, "onSingleTapConfirmed: " + event.toString());
-        connectionThread.write(Commands.LEFT_CLICK.toString());
+        JsonObject object = messageBuilder.getBaseObject();
+        object.addProperty(Constants.KEY_COMMAND, ClientCommands.LEFT_CLICK.toString());
+
+        connectionThread.write(messageBuilder.toJson(object));
 
         return true;
     }

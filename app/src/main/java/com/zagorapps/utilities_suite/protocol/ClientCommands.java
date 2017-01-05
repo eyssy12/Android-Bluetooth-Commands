@@ -3,7 +3,7 @@ package com.zagorapps.utilities_suite.protocol;
 /**
  * Created by eyssy on 28/07/2016.
  */
-public enum Commands
+public enum ClientCommands
 {
     LEFT_CLICK("LeftClick"),
     DOUBLE_TAP("DoubleTap"),
@@ -13,7 +13,7 @@ public enum Commands
 
     private final String value;
 
-    Commands(String value)
+    ClientCommands(String value)
     {
         this.value = value;
     }
