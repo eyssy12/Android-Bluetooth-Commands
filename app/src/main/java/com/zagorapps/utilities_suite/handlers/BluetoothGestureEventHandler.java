@@ -74,7 +74,7 @@ public class BluetoothGestureEventHandler implements GestureDetector.OnGestureLi
         MotionDistance distances = new MotionDistance(-distanceX, -distanceY); // 2 decimal places
 
         JsonObject object = messageBuilder.getBaseObject();
-        object.addProperty(Constants.KEY_MOTION, true);
+        object.addProperty(Constants.KEY_IDENTIFIER, Constants.KEY_MOTION);
         object.addProperty(Constants.KEY_MOTION_X, MotionDistance.increaseMouseMovement(distances.getDistanceX(), 1, Coordinate.X, 1));
         object.addProperty(Constants.KEY_MOTION_Y, MotionDistance.increaseMouseMovement(distances.getDistanceY(), 1, Coordinate.Y, 1));
 
@@ -99,7 +99,8 @@ public class BluetoothGestureEventHandler implements GestureDetector.OnGestureLi
     public void onLongPress(MotionEvent event)
     {
         JsonObject object = messageBuilder.getBaseObject();
-        object.addProperty(Constants.KEY_COMMAND, ClientCommands.RIGHT_CLICK.toString());
+        object.addProperty(Constants.KEY_IDENTIFIER, Constants.KEY_COMMAND);
+        object.addProperty(Constants.KEY_VALUE, ClientCommands.RIGHT_CLICK.toString());
 
         connectionThread.write(messageBuilder.toJson(object));
     }
@@ -119,7 +120,8 @@ public class BluetoothGestureEventHandler implements GestureDetector.OnGestureLi
     public boolean onDoubleTap(MotionEvent event)
     {
         JsonObject object = messageBuilder.getBaseObject();
-        object.addProperty(Constants.KEY_COMMAND, ClientCommands.DOUBLE_TAP.toString());
+        object.addProperty(Constants.KEY_IDENTIFIER, Constants.KEY_COMMAND);
+        object.addProperty(Constants.KEY_VALUE, ClientCommands.DOUBLE_TAP.toString());
 
         connectionThread.write(messageBuilder.toJson(object));
 
@@ -136,7 +138,8 @@ public class BluetoothGestureEventHandler implements GestureDetector.OnGestureLi
     public boolean onSingleTapConfirmed(MotionEvent event)
     {
         JsonObject object = messageBuilder.getBaseObject();
-        object.addProperty(Constants.KEY_COMMAND, ClientCommands.LEFT_CLICK.toString());
+        object.addProperty(Constants.KEY_IDENTIFIER, Constants.KEY_COMMAND);
+        object.addProperty(Constants.KEY_VALUE, ClientCommands.LEFT_CLICK.toString());
 
         connectionThread.write(messageBuilder.toJson(object));
 

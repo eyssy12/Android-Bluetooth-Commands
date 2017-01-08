@@ -6,13 +6,16 @@ package com.zagorapps.utilities_suite.protocol;
 
 public class Constants
 {
-    public static final String KEY_COMMAND = "cmd",
+    public static final String KEY_IDENTIFIER = "id",
+        KEY_VALUE = "value",
+        KEY_COMMAND = "cmd",
         KEY_VOICE = "voice",
         KEY_VOLUME = "vol",
-        KEY_VOLUME_VALUE = "value",
+        KEY_VOLUME_ENABLED = "volOn",
         KEY_MOTION = "motion",
         KEY_MOTION_X = "x",
         KEY_MOTION_Y = "y",
+        KEY_BATTERY = "battery",
         KEY_BATTERY_STATE = "batState",
         KEY_BATTERY_CHARGE_TYPE = "chargeType",
         KEY_BATTERY_CHARGING = "batCharge",

@@ -260,9 +260,9 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
         {
             connectionThread.close();
         }
-        else if (message.equals("Permitted Process Running"))
+        else if (message.equals("Prohibited Process Running"))
         {
-            SystemMessagingUtils.showShortToast(this, "Unable to perform system command since more than one permitted process is running.");
+            SystemMessagingUtils.showShortToast(this, "Unable to perform system command since more than one prohibited process is running.");
         }
         else if (message.equals("machine_locked"))
         {
@@ -281,7 +281,8 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
                 // TODO: return all data for the sync operation
 
                 JsonObject object = messageBuilder.getBaseObject();
-                object.addProperty(Constants.KEY_SYNC_STATE, Constants.VALUE_SYNC_RESPONSE_ACK);
+                object.addProperty(Constants.KEY_IDENTIFIER, Constants.KEY_SYNC_STATE);
+                object.addProperty(Constants.KEY_VALUE, Constants.VALUE_SYNC_RESPONSE_ACK);
 
                 this.connectionThread.write(messageBuilder.toJson(object));
 
@@ -362,7 +363,8 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
     public void onConnectionEstablished()
     {
         JsonObject object = messageBuilder.getBaseObject();
-        object.addProperty(Constants.KEY_SYNC_STATE, Constants.VALUE_SYNC_REQUEST);
+        object.addProperty(Constants.KEY_IDENTIFIER, Constants.KEY_SYNC_STATE);
+        object.addProperty(Constants.KEY_VALUE, Constants.VALUE_SYNC_REQUEST);
 
         this.connectionThread.write(messageBuilder.toJson(object));
     }
@@ -632,7 +634,8 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
                                 characterDisplayView.setText(sendValue);
 
                                 JsonObject object = messageBuilder.getBaseObject();
-                                object.addProperty(Constants.KEY_COMMAND, sendValue);
+                                object.addProperty(Constants.KEY_IDENTIFIER, Constants.KEY_COMMAND);
+                                object.addProperty(Constants.KEY_VALUE, sendValue);
 
                                 connectionThread.write(messageBuilder.toJson(object));
                             }
@@ -735,8 +738,9 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
         public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser)
         {
             JsonObject object = messageBuilder.getBaseObject();
-            object.addProperty(Constants.KEY_VOLUME, true);
-            object.addProperty(Constants.KEY_VOLUME_VALUE, progress);
+            object.addProperty(Constants.KEY_IDENTIFIER, Constants.KEY_VOLUME);
+            object.addProperty(Constants.KEY_VOLUME_ENABLED, true);
+            object.addProperty(Constants.KEY_VALUE, progress);
 
             connectionThread.write(messageBuilder.toJson(object));
         }
@@ -762,6 +766,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
                 String action = intent.getAction();
 
                 JsonObject json = messageBuilder.getBaseObject();
+                json.addProperty(Constants.KEY_IDENTIFIER, Constants.KEY_BATTERY);
 
                 if (action.equals(Intent.ACTION_BATTERY_CHANGED))
                 {
@@ -802,7 +807,8 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
         {
             JsonObject json = messageBuilder.getBaseObject();
 
-            json.addProperty(Constants.KEY_VOLUME, isChecked);
+            json.addProperty(Constants.KEY_IDENTIFIER, Constants.KEY_VOLUME);
+            json.addProperty(Constants.KEY_VOLUME_ENABLED, isChecked);
 
             connectionThread.write(messageBuilder.toJson(json)); // true for mute
         }
@@ -858,7 +864,9 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
                 txtSpeechInput.setText(recognisedText);
 
                 JsonObject object = messageBuilder.getBaseObject();
-                object.addProperty(Constants.KEY_VOICE, recognisedText);
+                object.addProperty(Constants.KEY_IDENTIFIER, Constants.KEY_VOICE);
+                object.addProperty(Constants.KEY_VALUE, recognisedText);
+
                 connectionThread.write(messageBuilder.toJson(object));
             }
         }
