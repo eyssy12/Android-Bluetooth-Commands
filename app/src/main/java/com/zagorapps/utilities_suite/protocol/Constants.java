@@ -11,6 +11,7 @@ public class Constants
         KEY_COMMAND = "cmd",
         KEY_VOICE = "voice",
         KEY_VOLUME = "vol",
+        KEY_SCREEN = "screen",
         KEY_VOLUME_ENABLED = "volOn",
         KEY_MOTION = "motion",
         KEY_MOTION_X = "x",

@@ -106,10 +106,13 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
     private AlertDialog machineLockedDialog;
 
     // System View
-    private SeekBar systemVolume;
-    private SeekBarChangeListener systemVolumeChangeListener;
+    private SeekBar systemVolumeSeekBar;
+    private SeekBar.OnSeekBarChangeListener systemVolumeSeekBarChangeListener;
     private ToggleButton muteButton;
     private ToggleButtonCheckedChangeListener muteButtonCheckedChangeListener;
+    
+    private SeekBar screenBrightnessSeekBar;
+    private SeekBar.OnSeekBarChangeListener screenBrightnessSeekBarChangeListener;
 
     // Specifics
     private BluetoothConnectionThread connectionThread;
@@ -214,7 +217,8 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
             if (doubleBackToExitPressedOnce)
             {
                 JsonObject object = messageBuilder.getBaseObject();
-                object.addProperty(Constants.KEY_COMMAND, ClientCommands.END_SESSION.toString());
+                object.addProperty(Constants.KEY_IDENTIFIER, Constants.KEY_COMMAND);
+                object.addProperty(Constants.KEY_VALUE, ClientCommands.END_SESSION.toString());
 
                 connectionThread.write(messageBuilder.toJson(object));
             }
@@ -305,6 +309,14 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
                     ViewUtils.setViewAndChildrenVisibility(parentView, View.VISIBLE);
                 }
             }
+            else if (data[0].equals("screen"))
+            {
+                int value = Integer.valueOf(data[1]);
+
+                screenBrightnessSeekBar.setOnSeekBarChangeListener(null);
+                screenBrightnessSeekBar.setProgress(value);
+                screenBrightnessSeekBar.setOnSeekBarChangeListener(screenBrightnessSeekBarChangeListener);
+            }
             else if (data[0].equals("vol"))
             {
                 // Data sent by the server is not one that the listeners should relay back to it, only user interaction ones
@@ -317,9 +329,9 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
                         this.setMuteButtonChecked(false);
                     }
 
-                    systemVolume.setOnSeekBarChangeListener(null);
-                    systemVolume.setProgress(value.intValue());
-                    systemVolume.setOnSeekBarChangeListener(systemVolumeChangeListener);
+                    systemVolumeSeekBar.setOnSeekBarChangeListener(null);
+                    systemVolumeSeekBar.setProgress(value.intValue());
+                    systemVolumeSeekBar.setOnSeekBarChangeListener(systemVolumeSeekBarChangeListener);
                 }
                 else
                 {
@@ -694,15 +706,63 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
     {
         View systemContainerView = tabbedViewPager.getTabbedAdapter().getViewByInteractionTab(InteractionTab.SYSTEM);
 
-        this.systemVolume = (SeekBar) systemContainerView.findViewById(R.id.seekBar_systemVolume);
-        this.systemVolume.setProgress(Integer.valueOf(initialSyncData[1]));
-        this.systemVolumeChangeListener = new SeekBarChangeListener();
-        this.systemVolume.setOnSeekBarChangeListener(systemVolumeChangeListener);
+        this.systemVolumeSeekBar = (SeekBar) systemContainerView.findViewById(R.id.seekBar_systemVolume);
+        this.systemVolumeSeekBar.setProgress(Integer.valueOf(initialSyncData[1]));
+        this.systemVolumeSeekBarChangeListener = new SeekBar.OnSeekBarChangeListener()
+        {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser)
+            {
+                JsonObject object = messageBuilder.getBaseObject();
+                object.addProperty(Constants.KEY_IDENTIFIER, Constants.KEY_VOLUME);
+                object.addProperty(Constants.KEY_VOLUME_ENABLED, true);
+                object.addProperty(Constants.KEY_VALUE, progress);
+
+                connectionThread.write(messageBuilder.toJson(object));
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar)
+            {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar)
+            {
+            }
+        };
+        this.systemVolumeSeekBar.setOnSeekBarChangeListener(systemVolumeSeekBarChangeListener);
 
         this.muteButton = (ToggleButton) systemContainerView.findViewById(R.id.toggleButton_systemVolumeMute);
         this.muteButton.setChecked(Boolean.valueOf(initialSyncData[0]));
         this.muteButtonCheckedChangeListener = new ToggleButtonCheckedChangeListener();
         this.muteButton.setOnCheckedChangeListener(muteButtonCheckedChangeListener);
+        
+        this.screenBrightnessSeekBar = (SeekBar) systemContainerView.findViewById(R.id.seekBar_screenBrightness);
+        this.screenBrightnessSeekBar.setProgress(Integer.valueOf(initialSyncData[2]));
+        this.screenBrightnessSeekBarChangeListener = new SeekBar.OnSeekBarChangeListener()
+        {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser)
+            {
+                JsonObject object = messageBuilder.getBaseObject();
+                object.addProperty(Constants.KEY_IDENTIFIER, Constants.KEY_SCREEN);
+                object.addProperty(Constants.KEY_VALUE, progress);
+
+                connectionThread.write(messageBuilder.toJson(object));
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar)
+            {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar)
+            {
+            }
+        };
+        this.screenBrightnessSeekBar.setOnSeekBarChangeListener(screenBrightnessSeekBarChangeListener);
     }
 
     private void initialiseVoiceInteractions()
@@ -729,31 +789,6 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
         this.muteButton.setOnCheckedChangeListener(null);
         this.muteButton.setChecked(isChecked);
         this.muteButton.setOnCheckedChangeListener(this.muteButtonCheckedChangeListener);
-    }
-
-    protected class SeekBarChangeListener implements SeekBar.OnSeekBarChangeListener
-    {
-
-        @Override
-        public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser)
-        {
-            JsonObject object = messageBuilder.getBaseObject();
-            object.addProperty(Constants.KEY_IDENTIFIER, Constants.KEY_VOLUME);
-            object.addProperty(Constants.KEY_VOLUME_ENABLED, true);
-            object.addProperty(Constants.KEY_VALUE, progress);
-
-            connectionThread.write(messageBuilder.toJson(object));
-        }
-
-        @Override
-        public void onStartTrackingTouch(SeekBar seekBar)
-        {
-        }
-
-        @Override
-        public void onStopTrackingTouch(SeekBar seekBar)
-        {
-        }
     }
 
     private final BroadcastReceiver batteryStateReceiver = new BroadcastReceiver()
