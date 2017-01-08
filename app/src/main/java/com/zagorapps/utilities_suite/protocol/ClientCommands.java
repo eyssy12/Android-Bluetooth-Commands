@@ -9,7 +9,9 @@ public enum ClientCommands
     DOUBLE_TAP("DoubleTap"),
     RIGHT_CLICK("RightClick"),
     MIDDLE_CLICK("MiddleClick"),
-    END_SESSION("EndSession");
+    END_SESSION("EndSession"),
+    CLOSE("Close"),
+    BACKSPACE("Backspace");
 
     private final String value;
 

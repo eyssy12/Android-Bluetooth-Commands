@@ -1,11 +1,11 @@
 package com.zagorapps.utilities_suite.protocol;
 
 /**
- * Created by eyssy on 31/07/2016.
+ * Created by eyssy on 05/01/2017.
  */
+
 public enum ServerCommands
 {
-    BACKSPACE("Backspace"),
     CLOSE("Close");
 
     private final String value;

@@ -622,7 +622,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
 
                                 if (keyCode == KeyEvent.KEYCODE_DEL)
                                 {
-                                    sendValue = ServerCommands.BACKSPACE.toString();
+                                    sendValue = ClientCommands.BACKSPACE.toString();
                                 }
                                 else
                                 {
@@ -735,7 +735,8 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
         public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser)
         {
             JsonObject object = messageBuilder.getBaseObject();
-            object.addProperty(Constants.KEY_VOLUME, progress);
+            object.addProperty(Constants.KEY_VOLUME, true);
+            object.addProperty(Constants.KEY_VOLUME_VALUE, progress);
 
             connectionThread.write(messageBuilder.toJson(object));
         }
@@ -801,7 +802,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
         {
             JsonObject json = messageBuilder.getBaseObject();
 
-            json.addProperty(Constants.KEY_VOLUME, String.valueOf(isChecked));
+            json.addProperty(Constants.KEY_VOLUME, isChecked);
 
             connectionThread.write(messageBuilder.toJson(json)); // true for mute
         }

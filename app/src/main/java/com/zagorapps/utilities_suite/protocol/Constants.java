@@ -9,6 +9,7 @@ public class Constants
     public static final String KEY_COMMAND = "cmd",
         KEY_VOICE = "voice",
         KEY_VOLUME = "vol",
+        KEY_VOLUME_VALUE = "value",
         KEY_MOTION = "motion",
         KEY_MOTION_X = "x",
         KEY_MOTION_Y = "y",
