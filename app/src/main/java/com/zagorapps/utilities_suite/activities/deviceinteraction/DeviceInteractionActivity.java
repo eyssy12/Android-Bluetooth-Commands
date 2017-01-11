@@ -31,6 +31,7 @@ import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -56,12 +57,16 @@ import com.zagorapps.utilities_suite.state.InteractionTab;
 import com.zagorapps.utilities_suite.state.models.BluetoothDeviceLite;
 import com.zagorapps.utilities_suite.state.models.TabPageMetadata;
 import com.zagorapps.utilities_suite.threading.BluetoothConnectionThread;
+import com.zagorapps.utilities_suite.utils.data.FileUtils;
 import com.zagorapps.utilities_suite.utils.data.NumberUtils;
 import com.zagorapps.utilities_suite.utils.threading.RunnableUtils;
 import com.zagorapps.utilities_suite.utils.view.ActivityUtils;
 import com.zagorapps.utilities_suite.utils.view.SystemMessagingUtils;
 import com.zagorapps.utilities_suite.utils.view.ViewUtils;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
@@ -71,7 +76,8 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
 {
     public static final String DEVICE_KEY = "device", MOUSE_SENSITIVITY_KEY = "mouse_sensitivity";
 
-    public static final int REQUEST_INTERACTION_SETTINGS = 100;
+    public static final int REQUEST_INTERACTION_SETTINGS = 100,
+        REQUEST_FILE_PICKER = REQUEST_INTERACTION_SETTINGS + 1;
 
     private static final float DEFAULT_MOUSE_SENSITIVITY = (float) 1.1;
 
@@ -413,6 +419,65 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
                 gestureHandler.setMouseSensitivity(MOUSE_SENSITIVITY);
             }
         }
+        else if (requestCode == REQUEST_FILE_PICKER)
+        {
+            if (resultCode == RESULT_OK)
+            {
+                String filepath = FileUtils.getPath(this, data.getData());
+
+                String[] split = filepath.split("/");
+                String fileNameWithExtension = split[split.length - 1];
+
+                try
+                {
+                    FileInputStream stream = new FileInputStream(filepath);
+
+                    if (stream.available() <= 1024)
+                    {
+                        byte[] fileBytes = new byte[stream.available()];
+
+                        byte byteValue;
+                        int index = 0;
+                        while((byteValue = (byte)stream.read()) != -1)
+                        {
+                            fileBytes[index] = byteValue;
+
+                            index++;
+                        }
+
+                        // TODO: delegate this task over to a FileSenderManager that will have a "enqueue" method taking in the String path
+                        // TODO: implement ability to send larger files by utilising chunking
+                        // determine all available bytes
+                        // divide by packet size
+                        // each packet should have an id/order that the server can verify
+                        // file sending ideally should be async (shouldn't block the ui, altho I'm not sure what impact would running the other commands have while a file is being delivered)
+                        // might be best to not allow intereaction while file(s) are being sent
+                        // -----------------------------
+                        // File sending operations should have a progress dialog to indicate progress.
+                        // Display in UI (and also maybe on the android top toolbar?)
+
+                        JsonObject object = messageBuilder.getBaseObject();
+                        object.addProperty(Constants.KEY_IDENTIFIER, Constants.KEY_FILE);
+                        object.addProperty(Constants.KEY_NAME, fileNameWithExtension);
+                        object.addProperty(Constants.KEY_VALUE, new String(fileBytes));
+
+                        connectionThread.write(messageBuilder.toJson(object));
+                    }
+                    else
+                    {
+                        SystemMessagingUtils.showShortToast(this, "File too large to send.");
+                    }
+                }
+                catch (FileNotFoundException e)
+                {
+                    e.printStackTrace();
+                }
+                catch (IOException e)
+                {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 
     private void prepareVoiceRecogniser()
@@ -705,6 +770,19 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
     private void initialiseSystemInteractions()
     {
         View systemContainerView = tabbedViewPager.getTabbedAdapter().getViewByInteractionTab(InteractionTab.SYSTEM);
+
+        Button filePicker = (Button) systemContainerView.findViewById(R.id.button_showFilePicker);
+        filePicker.setOnClickListener(new View.OnClickListener()
+        {
+            @Override
+            public void onClick(View v)
+            {
+                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                intent.setType("*/*");
+
+                startActivityForResult(intent, REQUEST_FILE_PICKER);
+            }
+        });
 
         this.systemVolumeSeekBar = (SeekBar) systemContainerView.findViewById(R.id.seekBar_systemVolume);
         this.systemVolumeSeekBar.setProgress(Integer.valueOf(initialSyncData[1]));

@@ -115,6 +115,25 @@ public class BluetoothConnectionThread extends Thread
         }
     }
 
+    // TODO: potential issue with bytes not being UTF-8
+    public void write(byte[] payload)
+    {
+        byte[] header;
+
+        if (payload.length <= 1024)
+        {
+            header = CollectionUtils.padBytes(TextUtils.getBytesForCharset(String.valueOf(payload.length), TextUtils.CHARSET_UTF_8), 4);
+        }
+        else
+        {
+            header = TextUtils.getBytesForCharset(String.valueOf(payload.length), TextUtils.CHARSET_UTF_8);
+        }
+
+        byte[] headerWithPayload = CollectionUtils.concat(header, payload);
+
+        this.write(headerWithPayload, 0, headerWithPayload.length);
+    }
+
     public void write(String payload)
     {
         byte[] payloadBytes = TextUtils.getBytesForCharset(payload, TextUtils.CHARSET_UTF_8);

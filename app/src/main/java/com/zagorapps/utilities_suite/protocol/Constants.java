@@ -7,6 +7,9 @@ package com.zagorapps.utilities_suite.protocol;
 public class Constants
 {
     public static final String KEY_IDENTIFIER = "id",
+        KEY_FILE = "file",
+        KEY_NAME = "name",
+        KEY_TYPE = "type",
         KEY_VALUE = "value",
         KEY_COMMAND = "cmd",
         KEY_VOICE = "voice",
