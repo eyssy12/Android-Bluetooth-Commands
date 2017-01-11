@@ -547,7 +547,6 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
 
         List<TabPageMetadata> inflatablePageMetadata = new ArrayList<>();
         inflatablePageMetadata.add(new TabPageMetadata(InteractionTab.MOUSE, R.layout.content_device_interaction_mouse, R.drawable.ic_mouse_white_48dp));
-        // TODO: will most likely re-add this back to allow functionality for some F1-12 keys and more
         inflatablePageMetadata.add(new TabPageMetadata(InteractionTab.KEYBOARD, R.layout.content_device_interaction_keyboard, R.drawable.ic_keyboard_white_48dp));
         inflatablePageMetadata.add(new TabPageMetadata(InteractionTab.SYSTEM, R.layout.content_device_interaction_system, R.drawable.ic_assignment_white_48dp));
         inflatablePageMetadata.add(new TabPageMetadata(InteractionTab.VOICE, R.layout.content_device_interaction_voice, R.drawable.ic_record_voice_over_white_48dp));
@@ -639,6 +638,8 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
         mouseTouchPadInteractiveViews.add(keyboardInteractionInitiatorContainer);
 
         // TODO: this should display a view that is "included" in the parent view of the interaction container
+        // <android:include />
+
         // I shouldn't need to programatically create textview's etc.
         keyboardBtn.setOnClickListener(new View.OnClickListener()
         {

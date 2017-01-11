@@ -58,6 +58,8 @@ public class BluetoothDeviceAdapter extends RecyclerViewAdapterBase<BluetoothDev
                 AlertDialog dialog = builder.setTitle("Options").setIcon(R.drawable.options).setItems(ITEMS, new DialogInterface.OnClickListener()
                 {
                     // TODO: change this to setAdapter instead to customise the dialog better with icons
+                    // display image buttons for "Connect", "Remove from list"
+                    // the custom view will have to be inflated using the R.layout.{id} and then added via the addView method of the dialog.
 
                     public void onClick(DialogInterface dialog, int which)
                     {
@@ -74,7 +76,7 @@ public class BluetoothDeviceAdapter extends RecyclerViewAdapterBase<BluetoothDev
                         {
                             try
                             {
-                                // TODO: how to invoke unpairing on both sides
+                                // TODO: how to invoke unpairing on both sides - should it even be part of the actions ?
                                 // as it is now, it only unpairs from this side, the server side still considers this device to be paired
                                 Method m = item.getClass().getMethod("removeBond", (Class[]) null);
 

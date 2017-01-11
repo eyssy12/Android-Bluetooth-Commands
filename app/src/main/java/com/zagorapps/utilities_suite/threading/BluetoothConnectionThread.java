@@ -36,6 +36,7 @@ public class BluetoothConnectionThread extends Thread
 
     private ConnectionState connectionState;
 
+    // TODO: the connection with server should be upkept in a Service... so that other activities can bind to the Service and make use of the socket too.
     public BluetoothConnectionThread(UUID serviceEndpoint, BluetoothDeviceLite targetDevice, Handler handler)
     {
         this.serviceEndpoint = serviceEndpoint;
