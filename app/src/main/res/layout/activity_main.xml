@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <android.support.design.widget.CoordinatorLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:card_view="http://schemas.android.com/apk/res-auto"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/coordinate_layout_main"
@@ -34,6 +35,41 @@
 
     </android.support.design.widget.AppBarLayout>
 
-    <include android:id="@+id/content_main_include" layout="@layout/content_main"/>
+    <com.zagorapps.utilities_suite.custom.EmptyRecyclerView
+        app:layout_behavior="@string/appbar_scrolling_view_behavior"
+        android:id="@+id/recycler_view_empty_support"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:scrollbars="vertical"
+        android:transcriptMode="alwaysScroll"/>
+
+    <include android:id="@+id/empty_recycler_view_state_layout" layout="@layout/empty_recycler_view_state_layout"/>
+
+    <android.support.v7.widget.CardView
+        android:layout_gravity="bottom"
+        android:id="@+id/refresh_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        card_view:cardElevation="26dp"
+        card_view:cardCornerRadius="0dp"
+        android:padding="16dp"
+        android:layout_margin="16dp">
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/colorPrimaryLight">
+
+            <Button
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/action_discover_devices"
+                android:textAppearance="?android:attr/textAppearanceLargeInverse"
+                android:id="@+id/btn_discovery"
+                android:background="?android:attr/selectableItemBackground"/>
+
+        </FrameLayout>
+
+    </android.support.v7.widget.CardView>
 
 </android.support.design.widget.CoordinatorLayout>

@@ -17,7 +17,7 @@
         android:layout_centerHorizontal="true"
         android:layout_marginTop="100dp"
         android:textColor="@color/black"
-        android:textSize="26dp"
+        android:textSize="26sp"
         android:textStyle="normal" />
 
     <LinearLayout
@@ -27,17 +27,15 @@
         android:layout_centerHorizontal="true"
         android:layout_marginBottom="60dp"
         android:gravity="center"
-        android:orientation="vertical" >
-
-
+        android:orientation="vertical">
 
         <android.support.design.widget.FloatingActionButton
             android:id="@+id/btnSpeak"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:background="@null"
-            android:src="@drawable/ic_keyboard_voice_black_48dp"
-            app:backgroundTint="@color/colorPrimaryLight"/>
+            android:src="@drawable/ic_mic_white_48dp"
+            app:backgroundTint="@color/colorPrimaryLight" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -45,8 +43,9 @@
             android:layout_marginTop="10dp"
             android:text="@string/action_tap_microphone"
             android:textColor="@color/black"
-            android:textSize="15dp"
+            android:textSize="16sp"
             android:textStyle="normal" />
+
     </LinearLayout>
 
 </RelativeLayout>

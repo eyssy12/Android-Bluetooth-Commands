@@ -52,7 +52,6 @@ public class MainActivity extends AppCompatActivity
     private Toolbar toolbar;
     private Menu optionsMenu;
     private View mainContainerView;
-    private View contentContainerView;
     private Button btnDiscover;
     private BluetoothAdapter bluetoothAdapter;
     private ProgressBar toolbarProgressBar;
@@ -74,7 +73,6 @@ public class MainActivity extends AppCompatActivity
         // ShortcutBadger.applyCount(getApplicationContext(), 2);
 
         mainContainerView = findViewById(R.id.coordinate_layout_main);
-        contentContainerView = mainContainerView.findViewById(R.id.content_main_include);
 
         toolbarProgressBar = (ProgressBar) mainContainerView.findViewById(R.id.toolbar_progress_bar);
         toolbarProgressBar.setIndeterminate(true);
@@ -98,7 +96,7 @@ public class MainActivity extends AppCompatActivity
 
     private void prepareDiscoveryButton()
     {
-        btnDiscover = (Button) contentContainerView.findViewById(R.id.btn_discovery);
+        btnDiscover = (Button) mainContainerView.findViewById(R.id.btn_discovery);
         btnDiscover.setOnClickListener(new View.OnClickListener()
         {
             @Override
@@ -168,7 +166,7 @@ public class MainActivity extends AppCompatActivity
 
     private void prepareAdapter()
     {
-        emptyRecyclerView = (EmptyRecyclerView) contentContainerView.findViewById(R.id.recycler_view_empty_support);
+        emptyRecyclerView = (EmptyRecyclerView) mainContainerView.findViewById(R.id.recycler_view_empty_support);
         emptyRecyclerView.setLayoutManager(new LinearLayoutManager(this));
 
         adapter = new BluetoothDeviceAdapter(this, emptyRecyclerView);
@@ -186,7 +184,7 @@ public class MainActivity extends AppCompatActivity
             adapter.replaceCollection(devices.getDevices(), true);
         }
 
-        emptyRecyclerView.setEmptyView(contentContainerView.findViewById(R.id.empty_recycler_view_state_layout));
+        emptyRecyclerView.setEmptyView(mainContainerView.findViewById(R.id.empty_recycler_view_state_layout));
         emptyRecyclerView.setAdapter(adapter);
     }
 
@@ -273,6 +271,16 @@ public class MainActivity extends AppCompatActivity
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.menu_main, menu);
 
+        MenuItem item = menu.findItem(R.id.action_connect_using_qr_code);
+        if (bluetoothAdapter.isEnabled())
+        {
+            item.setVisible(true);
+        }
+        else
+        {
+            item.setVisible(false);
+        }
+
         return true;
     }
 
@@ -307,11 +315,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode,
-                                           @NonNull
-                                                   String permissions[],
-                                           @NonNull
-                                                   int[] grantResults)
+    public void onRequestPermissionsResult(int requestCode, @NonNull String permissions[], @NonNull int[] grantResults)
     {
         switch (requestCode)
         {

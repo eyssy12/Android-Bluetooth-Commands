@@ -120,6 +120,8 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
     private SeekBar screenBrightnessSeekBar;
     private SeekBar.OnSeekBarChangeListener screenBrightnessSeekBarChangeListener;
 
+    private AlertDialog.Builder systemControlDialogBuilder;
+
     // Specifics
     private BluetoothConnectionThread connectionThread;
     private BluetoothDeviceLite targetDevice;
@@ -157,6 +159,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
         prepareStatics();
         prepareMachineAlertDialog();
         prepareProgressDialog();
+        prepareSystemControlDialog();
         prepareTabbedView();
         prepareBluetoothHandlers();
         prepareVoiceRecogniser();
@@ -541,6 +544,20 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
         progressDialog.show();
     }
 
+    private void prepareSystemControlDialog()
+    {
+        systemControlDialogBuilder = new AlertDialog.Builder(DeviceInteractionActivity.this);
+        systemControlDialogBuilder.setTitle("Confirm Action")
+                .setNegativeButton("Cancel", new DialogInterface.OnClickListener()
+                {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which)
+                    {
+                    }
+                })
+                .setCancelable(true);
+    }
+
     private void prepareTabbedView()
     {
         Pair<Integer, Integer> viewPagerTabLayoutResIds = new Pair<>(R.id.device_interaction_view_pager, R.id.device_interaction_tabs);
@@ -771,6 +788,65 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
     private void initialiseSystemInteractions()
     {
         View systemContainerView = tabbedViewPager.getTabbedAdapter().getViewByInteractionTab(InteractionTab.SYSTEM);
+
+        ImageButton lockMachine = (ImageButton) systemContainerView.findViewById(R.id.imageBtn_lock);
+        ImageButton restart = (ImageButton) systemContainerView.findViewById(R.id.imageBtn_restart);
+        ImageButton shutdown = (ImageButton) systemContainerView.findViewById(R.id.imageBtn_shutdown);
+
+        lockMachine.setOnClickListener(new View.OnClickListener()
+        {
+            @Override
+            public void onClick(View v)
+            {
+                JsonObject object = messageBuilder.getBaseObject();
+                object.addProperty(Constants.KEY_IDENTIFIER, Constants.KEY_VOICE);
+                object.addProperty(Constants.KEY_VALUE, "lock_machine");
+
+                connectionThread.write(messageBuilder.toJson(object));
+            }
+        });
+
+        restart.setOnClickListener(new View.OnClickListener()
+        {
+            @Override
+            public void onClick(View v)
+            {
+                systemControlDialogBuilder
+                        .setMessage("Are you sure you want to restart the machine?")
+                        .setPositiveButton("Confirm", new DialogInterface.OnClickListener()
+                        {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which)
+                            {
+                                // TODO: write to server
+                                SystemMessagingUtils.showShortToast(DeviceInteractionActivity.this, "Implement Restart");
+                            }
+                        })
+                        .create()
+                        .show();
+            }
+        });
+
+        shutdown.setOnClickListener(new View.OnClickListener()
+        {
+            @Override
+            public void onClick(View v)
+            {
+                systemControlDialogBuilder
+                        .setMessage("Are you sure you want to shutdown the machine?")
+                        .setPositiveButton("Confirm", new DialogInterface.OnClickListener()
+                        {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which)
+                            {
+                                // TODO: write to server
+                                SystemMessagingUtils.showShortToast(DeviceInteractionActivity.this, "Implement Shutdown");
+                            }
+                        })
+                        .create()
+                        .show();
+            }
+        });
 
         Button filePicker = (Button) systemContainerView.findViewById(R.id.button_showFilePicker);
         filePicker.setOnClickListener(new View.OnClickListener()

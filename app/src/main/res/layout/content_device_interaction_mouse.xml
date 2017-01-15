@@ -36,12 +36,12 @@
             android:textAppearance="?android:attr/textAppearanceMedium"
             android:text="Medium Text"
             android:id="@+id/received_data_text"
-            android:paddingBottom="@dimen/default_padding"/>
+            android:paddingBottom="@dimen/default_padding" />
 
         <ImageView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:id="@+id/touchpad_area"/>
+            android:id="@+id/touchpad_area" />
     </LinearLayout>
 
     <LinearLayout
@@ -49,14 +49,14 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:layout_centerInParent="true"
-        >
+        android:layout_centerInParent="true">
 
         <ImageButton
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:id="@+id/keyboard_image_btn"
-            android:src="@drawable/ic_keyboard_black_48dp"/>
+            android:src="@drawable/ic_keyboard_black_48dp"
+            android:background="?attr/selectableItemBackgroundBorderless" />
     </LinearLayout>
 
 </RelativeLayout>
