@@ -30,7 +30,7 @@ public class Constants
         VALUE_CHARGE_TYPE_AC = "ac",
         VALUE_CHARGE_TYPE_USB = "usb";
 
-    public static final String VALUE_SYNC_REQUEST = "syncRequest",
-        VALUE_SYNC_RESPONSE = "syncResponse",
-        VALUE_SYNC_RESPONSE_ACK = "syncResponseAck";
+    public static final String VALUE_SYNC_REQUEST = "Request",
+        VALUE_SYNC_RESPONSE = "Response",
+        VALUE_SYNC_RESPONSE_ACK = "ResponseAck";
 }
