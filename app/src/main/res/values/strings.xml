@@ -1,10 +1,12 @@
 <resources>
-    
-    <string name="app_name">Discovery</string>
-    
+
+    <string name="app_name">Utilities Suite</string>
+
     <!-- Action -->
     <string name="action_settings">Settings</string>
     <string name="action_connect_using_qr_code">Launch QR Code Scanner</string>
+    <string name="action_save_to_server">Save To Server</string>
+    <string name="action_clear_list">Clear List</string>
     <string name="action_clear_preferences">Clear Preferences</string>
     <string name="action_clear_bonded_devices">Clear Devices</string>
     <string name="action_discover_devices">Discover Devices</string>
@@ -25,5 +27,6 @@
     <string name="title_activity_interaction_settings">Interaction Settings</string>
     <string name="title_activity_udp_connect_to_server">UdpConnectToServer</string>
     <string name="title_discovery_activity_default">Devices</string>
+    <string name="title_activity_clipboard_manager">Copied Contents</string>
 
 </resources>

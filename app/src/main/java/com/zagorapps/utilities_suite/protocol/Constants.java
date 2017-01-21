@@ -1,5 +1,7 @@
 package com.zagorapps.utilities_suite.protocol;
 
+import java.text.SimpleDateFormat;
+
 /**
  * Created by eyssy on 05/01/2017.
  */
@@ -33,4 +35,6 @@ public class Constants
     public static final String VALUE_SYNC_REQUEST = "Request",
         VALUE_SYNC_RESPONSE = "Response",
         VALUE_SYNC_RESPONSE_ACK = "ResponseAck";
+
+    public static final SimpleDateFormat DEFAULT_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss a");
 }

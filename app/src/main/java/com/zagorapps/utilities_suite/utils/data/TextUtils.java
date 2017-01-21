@@ -15,6 +15,11 @@ public class TextUtils
 
     public static final String CHARSET_UTF_8 = "UTF-8";
 
+    public static boolean isEmpty(String data)
+    {
+        return data == null || data.length() == 0;
+    }
+
     public static byte[] getBytesForCharset(String data, String charset)
     {
         try

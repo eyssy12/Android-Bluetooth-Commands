@@ -12,7 +12,7 @@ import com.zagorapps.utilities_suite.R;
  */
 public class ComplexPreferences
 {
-    private static final String DEFAULT_NAMED_PREFERENCES = "complex_preferences";
+    private static final String DEFAULT_NAMED_PREFERENCES = "mypref";
 
     private static ComplexPreferences COMPLEX_PREFERENCES;
     private static Gson GSON = new Gson();
@@ -32,6 +32,11 @@ public class ComplexPreferences
 
         preferences = context.getSharedPreferences(namePreferences, mode);
         editor = preferences.edit();
+    }
+
+    public static ComplexPreferences getComplexPreferences(Context context, int mode)
+    {
+        return getComplexPreferences(context, null, mode);
     }
 
     public static ComplexPreferences getComplexPreferences(Context context, String namePreferences, int mode)
@@ -72,9 +77,10 @@ public class ComplexPreferences
 
     public <T> T getObject(String key, Class<T> a)
     {
-        String gson = preferences.getString(key, null);
+        String json;
+        json = preferences.getString(key, null);
 
-        if (gson == null)
+        if (json == null)
         {
             return null;
         }
@@ -82,7 +88,7 @@ public class ComplexPreferences
         {
             try
             {
-                return GSON.fromJson(gson, a);
+                return GSON.fromJson(json, a);
             }
             catch (Exception e)
             {

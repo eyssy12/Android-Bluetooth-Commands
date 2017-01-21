@@ -28,6 +28,7 @@ import com.zagorapps.utilities_suite.R;
 import com.zagorapps.utilities_suite.activities.deviceinteraction.DeviceInteractionActivity;
 import com.zagorapps.utilities_suite.adapters.BluetoothDeviceAdapter;
 import com.zagorapps.utilities_suite.custom.EmptyRecyclerView;
+import com.zagorapps.utilities_suite.services.persistent.ClipboardManagerListenerService;
 import com.zagorapps.utilities_suite.state.ComplexPreferences;
 import com.zagorapps.utilities_suite.state.models.BluetoothDeviceLite;
 import com.zagorapps.utilities_suite.state.models.BluetoothDevicesList;
@@ -84,12 +85,13 @@ public class MainActivity extends AppCompatActivity
         prepareAdapter();
         prepareDiscoveryButton();
         prepareBluetoothAdapter();
+        prepareServices();
     }
 
     private void prepareStatics()
     {
         TITLE_FORMAT = getString(R.string.format_device_discovery_title);
-        complexPreferences = ComplexPreferences.getComplexPreferences(this, "mypref", MODE_PRIVATE);
+        complexPreferences = ComplexPreferences.getComplexPreferences(this, MODE_PRIVATE);
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         resources = getResources();
     }
@@ -181,11 +183,17 @@ public class MainActivity extends AppCompatActivity
         }
         else
         {
-            adapter.replaceCollection(devices.getDevices(), true);
+            adapter.replaceCollection(devices.cloneItems(), true);
         }
 
         emptyRecyclerView.setEmptyView(mainContainerView.findViewById(R.id.empty_recycler_view_state_layout));
         emptyRecyclerView.setAdapter(adapter);
+    }
+
+    private void prepareServices()
+    {
+        Intent startServiceIntent = new Intent(this, ClipboardManagerListenerService.class);
+        this.startService(startServiceIntent);
     }
 
     @Override
@@ -234,7 +242,7 @@ public class MainActivity extends AppCompatActivity
                     devices = new BluetoothDevicesList();
                 }
 
-                if (devices.addDevice(device))
+                if (devices.addItem(device))
                 {
                     complexPreferences.putObject(BluetoothDevicesList.class.getSimpleName(), devices);
                     complexPreferences.commit();

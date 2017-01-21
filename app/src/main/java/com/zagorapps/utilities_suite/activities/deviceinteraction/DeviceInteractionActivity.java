@@ -1,7 +1,6 @@
 package com.zagorapps.utilities_suite.activities.deviceinteraction;
 
 import android.app.ProgressDialog;
-import android.bluetooth.BluetoothAdapter;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -77,7 +76,8 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
     public static final String DEVICE_KEY = "device", MOUSE_SENSITIVITY_KEY = "mouse_sensitivity";
 
     public static final int REQUEST_INTERACTION_SETTINGS = 100,
-        REQUEST_FILE_PICKER = REQUEST_INTERACTION_SETTINGS + 1;
+        REQUEST_FILE_PICKER = REQUEST_INTERACTION_SETTINGS + 1,
+        REUEST_CLIPBOARD_MANAGER = REQUEST_FILE_PICKER + 1;
 
     private static final float DEFAULT_MOUSE_SENSITIVITY = (float) 1.1;
 
@@ -87,8 +87,6 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
     private int keyboardInteractionViewId;
     private boolean keyboardInteractionInitiated = false;
     private boolean doubleBackToExitPressedOnce = false;
-
-    private String myBluetoothName;
 
     // Parent View
     private View parentView;
@@ -610,8 +608,6 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
 
     private void prepareBluetoothHandlers()
     {
-        myBluetoothName = BluetoothAdapter.getDefaultAdapter().getName();
-
         messageHandler = new BluetoothMessageHandler(this);
         // TODO: pass down the password that will create the server endpoint out of it as a UUID
         connectionThread = new BluetoothConnectionThread(SERVER_ENDPOINT, targetDevice, messageHandler);
@@ -858,6 +854,16 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
                 intent.setType("*/*");
 
                 startActivityForResult(intent, REQUEST_FILE_PICKER);
+            }
+        });
+
+        Button startClipboardActivity = (Button) systemContainerView.findViewById(R.id.button_start_clipboard_manager_activity);
+        startClipboardActivity.setOnClickListener(new View.OnClickListener()
+        {
+            @Override
+            public void onClick(View v)
+            {
+                ActivityUtils.simpleStartActivityForResult(DeviceInteractionActivity.this, ClipboardManagerActivity.class, REUEST_CLIPBOARD_MANAGER);
             }
         });
 

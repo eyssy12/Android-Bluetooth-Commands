@@ -7,7 +7,6 @@ import android.content.res.Resources;
 import android.os.Parcel;
 import android.os.Parcelable;
 
-import com.google.gson.Gson;
 import com.zagorapps.utilities_suite.R;
 
 import java.io.IOException;
@@ -18,8 +17,6 @@ import java.util.UUID;
  */
 public class BluetoothDeviceLite implements Parcelable
 {
-    protected static final Gson GSON = new Gson();
-
     private final String address, identity;
     private String name;
     private int bondState, deviceType;
@@ -149,8 +146,6 @@ public class BluetoothDeviceLite implements Parcelable
         {
             return false;
         }
-
-        boolean result = identity.equals(((BluetoothDeviceLite) o).identity);
 
         return identity.equals(((BluetoothDeviceLite) o).identity);
     }

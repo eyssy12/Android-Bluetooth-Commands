@@ -1,10 +1,17 @@
 package com.zagorapps.utilities_suite.utils.data;
 
+import java.util.List;
+
 /**
  * Created by eyssy on 01/09/2016.
  */
 public class CollectionUtils
 {
+    public static boolean isEmpty(List<?> collection)
+    {
+        return collection == null || collection.size() == 0;
+    }
+
     public static byte[] concat(byte[] first, byte[]... subsequent)
     {
         int subsequentTotalLength = 0;
