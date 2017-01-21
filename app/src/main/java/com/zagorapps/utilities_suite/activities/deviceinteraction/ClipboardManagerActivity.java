@@ -97,8 +97,8 @@ public class ClipboardManagerActivity extends AppCompatActivity
         // TODO: need to have the bluetooth connection thread as a service...
 
         // get all checked items and package them to JSON
-        // send data
-        // if successful, remove from items from preferences
+        // send data to server as a "file" action
+        // if successful, remove from items from adapter and preferences
     }
 
     private void clearAdapter()
