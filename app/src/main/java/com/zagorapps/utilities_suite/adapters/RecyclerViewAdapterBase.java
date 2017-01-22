@@ -156,4 +156,9 @@ public abstract class RecyclerViewAdapterBase<T, VH extends RecyclerView.ViewHol
     {
         notifyDataSetChanged();
     }
+
+    public List<T> getItems()
+    {
+        return (List<T>) this.items.clone();
+    }
 }

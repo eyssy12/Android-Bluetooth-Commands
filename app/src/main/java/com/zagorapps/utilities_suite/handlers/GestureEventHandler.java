@@ -1,40 +1,41 @@
 package com.zagorapps.utilities_suite.handlers;
 
+import android.content.ComponentName;
 import android.content.Context;
+import android.content.Intent;
+import android.content.ServiceConnection;
+import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.v4.view.GestureDetectorCompat;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 
 import com.google.gson.JsonObject;
-import com.zagorapps.utilities_suite.enumerations.ConnectionState;
 import com.zagorapps.utilities_suite.enumerations.Coordinate;
-import com.zagorapps.utilities_suite.interfaces.IHandler;
+import com.zagorapps.utilities_suite.interfaces.SimpleHandler;
 import com.zagorapps.utilities_suite.protocol.ClientCommands;
 import com.zagorapps.utilities_suite.protocol.Constants;
 import com.zagorapps.utilities_suite.protocol.MessageBuilder;
+import com.zagorapps.utilities_suite.services.net.ServerConnectionService;
 import com.zagorapps.utilities_suite.state.models.MotionDistance;
-import com.zagorapps.utilities_suite.threading.BluetoothConnectionThread;
 
 /**
  * Created by eyssy on 01/09/2016.
  */
-public class BluetoothGestureEventHandler implements GestureDetector.OnGestureListener, GestureDetector.OnDoubleTapListener, IHandler
+public class GestureEventHandler implements GestureDetector.OnGestureListener, GestureDetector.OnDoubleTapListener, SimpleHandler
 {
     private MessageBuilder messageBuilder;
 
     private Context context;
-    private BluetoothConnectionThread connectionThread;
+    private ServerConnectionService connectionService;
 
     private GestureDetectorCompat gestureDetector;
 
     private float mouseSensitivity;
+    private boolean serviceBounded = false;
     
-    public BluetoothGestureEventHandler(
-            @NonNull Context context,
-            @NonNull BluetoothConnectionThread connectionThread, float mouseSensitivity)
+    public GestureEventHandler(@NonNull Context context, float mouseSensitivity)
     {
-        this.connectionThread = connectionThread;
         this.context = context;
         this.mouseSensitivity = mouseSensitivity;
 
@@ -56,15 +57,24 @@ public class BluetoothGestureEventHandler implements GestureDetector.OnGestureLi
         return gestureDetector.onTouchEvent(event);
     }
 
+    public void stopHandler()
+    {
+        if (serviceBounded)
+        {
+            context.unbindService(binderService);
+        }
+    }
+    
     @Override
     public void beginHandler()
     {
-        this.gestureDetector = new GestureDetectorCompat(context, this);
-        this.gestureDetector.setOnDoubleTapListener(this);
-
-        if (connectionThread.getConnectionState() == ConnectionState.NOT_STARTED)
+        if (!serviceBounded)
         {
-            connectionThread.start();
+            gestureDetector = new GestureDetectorCompat(context, this);
+            gestureDetector.setOnDoubleTapListener(this);
+
+            Intent intent = new Intent(context, ServerConnectionService.class);
+            context.bindService(intent, binderService, Context.BIND_AUTO_CREATE);
         }
     }
 
@@ -78,7 +88,7 @@ public class BluetoothGestureEventHandler implements GestureDetector.OnGestureLi
         object.addProperty(Constants.KEY_MOTION_X, MotionDistance.increaseMouseMovement(distances.getDistanceX(), 1, Coordinate.X, 1));
         object.addProperty(Constants.KEY_MOTION_Y, MotionDistance.increaseMouseMovement(distances.getDistanceY(), 1, Coordinate.Y, 1));
 
-        connectionThread.write(messageBuilder.toJson(object));
+        connectionService.write(messageBuilder.toJson(object));
 
         return true;
     }
@@ -102,7 +112,7 @@ public class BluetoothGestureEventHandler implements GestureDetector.OnGestureLi
         object.addProperty(Constants.KEY_IDENTIFIER, Constants.KEY_COMMAND);
         object.addProperty(Constants.KEY_VALUE, ClientCommands.RIGHT_CLICK.toString());
 
-        connectionThread.write(messageBuilder.toJson(object));
+        connectionService.write(messageBuilder.toJson(object));
     }
 
     @Override
@@ -123,7 +133,7 @@ public class BluetoothGestureEventHandler implements GestureDetector.OnGestureLi
         object.addProperty(Constants.KEY_IDENTIFIER, Constants.KEY_COMMAND);
         object.addProperty(Constants.KEY_VALUE, ClientCommands.DOUBLE_TAP.toString());
 
-        connectionThread.write(messageBuilder.toJson(object));
+        connectionService.write(messageBuilder.toJson(object));
 
         return true;
     }
@@ -141,8 +151,29 @@ public class BluetoothGestureEventHandler implements GestureDetector.OnGestureLi
         object.addProperty(Constants.KEY_IDENTIFIER, Constants.KEY_COMMAND);
         object.addProperty(Constants.KEY_VALUE, ClientCommands.LEFT_CLICK.toString());
 
-        connectionThread.write(messageBuilder.toJson(object));
+        connectionService.write(messageBuilder.toJson(object));
 
         return true;
     }
+
+    private ServiceConnection binderService = new ServiceConnection()
+    {
+        @Override
+        public void onServiceConnected(ComponentName className, IBinder service)
+        {
+            // We've bound to LocalService, cast the IBinder and get LocalService instance
+            ServerConnectionService.ServerConnectionBinder binder = (ServerConnectionService.ServerConnectionBinder) service;
+            connectionService = binder.getService();
+
+            serviceBounded = true;
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName arg0)
+        {
+            stopHandler();
+
+            serviceBounded = false;
+        }
+    };
 }

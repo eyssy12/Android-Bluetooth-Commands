@@ -3,7 +3,7 @@ package com.zagorapps.utilities_suite.interfaces;
 /**
  * Created by eyssy on 01/09/2016.
  */
-public interface OnBluetoothMessageListener
+public interface ServerMessagingListener
 {
     void onMessageRead(String message);
     void onMessageSent(String message);

@@ -25,6 +25,7 @@
         </receiver>
 
         <service android:name=".services.persistent.ClipboardManagerListenerService" />
+        <service android:name=".services.net.ServerConnectionService" />
 
         <activity
             android:name=".activities.MainActivity"

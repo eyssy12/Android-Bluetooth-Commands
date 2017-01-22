@@ -193,7 +193,7 @@ public class MainActivity extends AppCompatActivity
     private void prepareServices()
     {
         Intent startServiceIntent = new Intent(this, ClipboardManagerListenerService.class);
-        this.startService(startServiceIntent);
+        startService(startServiceIntent);
     }
 
     @Override

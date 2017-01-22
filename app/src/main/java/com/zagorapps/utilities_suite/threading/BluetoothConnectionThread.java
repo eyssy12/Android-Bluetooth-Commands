@@ -1,10 +1,12 @@
 package com.zagorapps.utilities_suite.threading;
 
 import android.bluetooth.BluetoothSocket;
-import android.os.Handler;
 import android.os.Message;
+import android.support.annotation.NonNull;
+import android.util.SparseArray;
 
 import com.zagorapps.utilities_suite.enumerations.ConnectionState;
+import com.zagorapps.utilities_suite.handlers.HandlerBase;
 import com.zagorapps.utilities_suite.state.models.BluetoothDeviceLite;
 import com.zagorapps.utilities_suite.utils.data.CollectionUtils;
 import com.zagorapps.utilities_suite.utils.data.TextUtils;
@@ -27,9 +29,9 @@ public class BluetoothConnectionThread extends Thread
         MESSAGE_FAILED = MESSAGE_SENT + 1;
 
     private final UUID serviceEndpoint;
-    private final Handler handler;
     private final BluetoothDeviceLite targetDevice;
 
+    private SparseArray<HandlerBase> handlers;
     private BluetoothSocket socket;
     private InputStream inputStream;
     private DataOutputStream writer;
@@ -37,83 +39,103 @@ public class BluetoothConnectionThread extends Thread
     private ConnectionState connectionState;
 
     // TODO: the connection with server should be upkept in a Service... so that other activities can bind to the Service and make use of the socket too.
-    public BluetoothConnectionThread(UUID serviceEndpoint, BluetoothDeviceLite targetDevice, Handler handler)
+    public BluetoothConnectionThread(UUID serviceEndpoint, BluetoothDeviceLite targetDevice)
     {
         this.serviceEndpoint = serviceEndpoint;
-        this.handler = handler;
         this.targetDevice = targetDevice;
 
+        this.handlers = new SparseArray<>();
         this.connectionState = ConnectionState.NOT_STARTED;
     }
 
-    public Handler getThreadHandler()
+    public BluetoothDeviceLite getTargetDevice()
     {
-        return handler;
-    }
-
-    private boolean connectionEnsured()
-    {
-        try
-        {
-            socket.connect();
-
-            return socket.isConnected();
-        }
-        catch (IOException ex)
-        {
-            return false;
-        }
+        return targetDevice;
     }
 
     public void run()
     {
-        try
+        if (handlers.size() > 0)
         {
-            socket = targetDevice.createSocket(serviceEndpoint);
-
-            if (connectionEnsured())
+            try
             {
-                connectionState = ConnectionState.CONNECTED;
-
-                inputStream = socket.getInputStream();
-                writer = new DataOutputStream(socket.getOutputStream());
-                // bufferedOutputStream = new BufferedOutputStream(socket.getOutputStream());
-
-                // inform parent activity that the interaction with the other device is good to go
-                sendHandlerMessage(CONNECTION_ESTABLISHED, 0, -1, new byte[]{});
-
-                // Keep listening to the InputStream until an exception occurs
-                while (true)
+                if (establishConnection())
                 {
-                    try
+                    connectionState = ConnectionState.CONNECTED;
+
+                    inputStream = socket.getInputStream();
+                    writer = new DataOutputStream(socket.getOutputStream());
+                    // bufferedOutputStream = new BufferedOutputStream(socket.getOutputStream());
+
+                    // inform subscribed handlers that the interaction with the other device is good to go
+                    sendHandlerMessage(CONNECTION_ESTABLISHED, 0, -1, new byte[]{});
+
+                    // Keep listening to the InputStream until an exception occurs
+                    while (true)
                     {
-                        int availableBytes = inputStream.available();
-                        if (inputStream.available() > 0)
+                        try
                         {
-                            byte[] buffer = new byte[availableBytes];
+                            int availableBytes = inputStream.available();
+                            if (inputStream.available() > 0)
+                            {
+                                byte[] buffer = new byte[availableBytes];
 
-                            // Read from the InputStream
-                            int bytes = inputStream.read(buffer);
+                                // Read from the InputStream
+                                int bytes = inputStream.read(buffer);
 
-                            // Send the obtained bytes to the UI activity
-                            sendHandlerMessage(MESSAGE_READ, bytes, -1, buffer);
+                                // Send the obtained bytes to the UI activity
+                                sendHandlerMessage(MESSAGE_READ, bytes, -1, buffer);
+                            }
+                        }
+                        catch (IOException e)
+                        {
+                            break;
                         }
                     }
-                    catch (IOException e)
-                    {
-                        break;
-                    }
+                }
+                else
+                {
+                    sendHandlerMessage(CONNECTION_FAILED, 0, -1, new byte[]{});
                 }
             }
-            else
+            catch (IOException e)
             {
-                sendHandlerMessage(CONNECTION_FAILED, 0, -1, new byte[]{});
+                e.printStackTrace();
             }
         }
-        catch (IOException e)
+        else
         {
-            e.printStackTrace();
+            // TODO: log that there are no handlers
         }
+    }
+
+    public boolean subscribe(@NonNull HandlerBase handler)
+    {
+        if (this.handlers.get(handler.getId()) == null)
+        {
+            this.handlers.put(handler.getId(), handler);
+
+            return true;
+        }
+
+        return false;
+    }
+
+    public boolean unsubscribe(@NonNull HandlerBase handler)
+    {
+        return this.unsubscribe(handler.getId());
+    }
+    
+    public boolean unsubscribe(int handlerId)
+    {
+        if (this.handlers.get(handlerId) != null)
+        {
+            this.handlers.remove(handlerId);
+            
+            return true;
+        }
+        
+        return false;
     }
 
     // TODO: potential issue with bytes not being UTF-8
@@ -172,12 +194,6 @@ public class BluetoothConnectionThread extends Thread
         }
     }
 
-    private void sendHandlerMessage(int type, int arg1, int arg2, Object obj)
-    {
-        Message msg = handler.obtainMessage(type, arg1, arg2, obj);
-        handler.sendMessage(msg);
-    }
-
     public void close()
     {
         try
@@ -224,5 +240,31 @@ public class BluetoothConnectionThread extends Thread
     public ConnectionState getConnectionState()
     {
         return connectionState;
+    }
+
+    private boolean establishConnection()
+    {
+        try
+        {
+            socket = targetDevice.createSocket(serviceEndpoint);
+            socket.connect();
+
+            return socket.isConnected();
+        }
+        catch (IOException ex)
+        {
+            return false;
+        }
+    }
+
+    private void sendHandlerMessage(int type, int arg1, int arg2, Object obj)
+    {
+        for (int i = 0; i < this.handlers.size(); i++)
+        {
+            HandlerBase handler = handlers.valueAt(i);
+
+            Message msg = handler.obtainMessage(type, arg1, arg2, obj);
+            handler.dispatchMessage(msg);
+        }
     }
 }

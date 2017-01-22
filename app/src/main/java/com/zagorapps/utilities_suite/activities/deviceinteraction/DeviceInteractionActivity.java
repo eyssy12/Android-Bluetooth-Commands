@@ -2,12 +2,15 @@ package com.zagorapps.utilities_suite.activities.deviceinteraction;
 
 import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.os.BatteryManager;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
@@ -45,17 +48,16 @@ import com.google.gson.JsonObject;
 import com.squareup.picasso.Picasso;
 import com.zagorapps.utilities_suite.R;
 import com.zagorapps.utilities_suite.custom.TabbedViewPager;
-import com.zagorapps.utilities_suite.handlers.BluetoothGestureEventHandler;
-import com.zagorapps.utilities_suite.handlers.BluetoothMessageHandler;
-import com.zagorapps.utilities_suite.interfaces.OnBluetoothMessageListener;
+import com.zagorapps.utilities_suite.handlers.GestureEventHandler;
+import com.zagorapps.utilities_suite.handlers.ServerMessageHandler;
+import com.zagorapps.utilities_suite.interfaces.ServerMessagingListener;
 import com.zagorapps.utilities_suite.protocol.ClientCommands;
 import com.zagorapps.utilities_suite.protocol.Constants;
 import com.zagorapps.utilities_suite.protocol.MessageBuilder;
 import com.zagorapps.utilities_suite.protocol.ServerCommands;
+import com.zagorapps.utilities_suite.services.net.ServerConnectionService;
 import com.zagorapps.utilities_suite.state.InteractionTab;
-import com.zagorapps.utilities_suite.state.models.BluetoothDeviceLite;
 import com.zagorapps.utilities_suite.state.models.TabPageMetadata;
-import com.zagorapps.utilities_suite.threading.BluetoothConnectionThread;
 import com.zagorapps.utilities_suite.utils.data.FileUtils;
 import com.zagorapps.utilities_suite.utils.data.NumberUtils;
 import com.zagorapps.utilities_suite.utils.threading.RunnableUtils;
@@ -66,18 +68,17 @@ import com.zagorapps.utilities_suite.utils.view.ViewUtils;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-public class DeviceInteractionActivity extends AppCompatActivity implements OnBluetoothMessageListener
+public class DeviceInteractionActivity extends AppCompatActivity implements ServerMessagingListener
 {
     public static final String DEVICE_KEY = "device", MOUSE_SENSITIVITY_KEY = "mouse_sensitivity";
 
     public static final int REQUEST_INTERACTION_SETTINGS = 100,
         REQUEST_FILE_PICKER = REQUEST_INTERACTION_SETTINGS + 1,
-        REUEST_CLIPBOARD_MANAGER = REQUEST_FILE_PICKER + 1;
+        REQUEST_CLIPBOARD_MANAGER = REQUEST_FILE_PICKER + 1;
 
     private static final float DEFAULT_MOUSE_SENSITIVITY = (float) 1.1;
 
@@ -121,10 +122,11 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
     private AlertDialog.Builder systemControlDialogBuilder;
 
     // Specifics
-    private BluetoothConnectionThread connectionThread;
-    private BluetoothDeviceLite targetDevice;
-    private BluetoothMessageHandler messageHandler;
-    private BluetoothGestureEventHandler gestureHandler;
+    private ServerMessageHandler messageHandler;
+    private GestureEventHandler gestureHandler;
+
+    private ServerConnectionService connectionService;
+    private boolean serviceBounded = false;
 
     private String[] initialSyncData;
     private boolean serverSyncUpInitialised = false;
@@ -143,27 +145,48 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
 
         ViewUtils.setViewAndChildrenVisibility(parentView, View.INVISIBLE);
 
-        try
-        {
-            SERVER_ENDPOINT = UUID.nameUUIDFromBytes("12345".getBytes("UTF-8"));
-        }
-        catch (UnsupportedEncodingException e)
-        {
-            e.printStackTrace();
-        }
-
-        targetDevice = getIntent().getExtras().getParcelable(DEVICE_KEY);
-
         prepareStatics();
         prepareMachineAlertDialog();
         prepareProgressDialog();
         prepareSystemControlDialog();
         prepareTabbedView();
-        prepareBluetoothHandlers();
+        prepareHandlers();
         prepareVoiceRecogniser();
 
-        gestureHandler.beginHandler();
+        beginInteraction(getIntent().getExtras());
     }
+
+    private void beginInteraction(Bundle extras)
+    {
+        Intent intent = new Intent(this, ServerConnectionService.class);
+        intent.putExtras(extras); // pass on the target device bundle to service
+
+        startService(intent);
+        bindService(intent, binderService, Context.BIND_AUTO_CREATE);
+    }
+
+    private ServiceConnection binderService = new ServiceConnection()
+    {
+        @Override
+        public void onServiceConnected(ComponentName className, IBinder service)
+        {
+            ServerConnectionService.ServerConnectionBinder binder = (ServerConnectionService.ServerConnectionBinder) service;
+
+            connectionService = binder.getService();
+            connectionService.subscribe(messageHandler);
+
+            gestureHandler.beginHandler();
+            connectionService.runConnectionThread();
+
+            serviceBounded = true;
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName arg0)
+        {
+            serviceBounded = false;
+        }
+    };
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item)
@@ -227,7 +250,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
                 object.addProperty(Constants.KEY_IDENTIFIER, Constants.KEY_COMMAND);
                 object.addProperty(Constants.KEY_VALUE, ClientCommands.END_SESSION.toString());
 
-                connectionThread.write(messageBuilder.toJson(object));
+                connectionService.write(messageBuilder.toJson(object));
             }
             else
             {
@@ -269,7 +292,10 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
         // TODO: implement JSON based messaging
         if (message.equals(ServerCommands.CLOSE.toString()))
         {
-            connectionThread.close();
+            gestureHandler.stopHandler();
+
+            unbindService(binderService);
+            stopService(new Intent(this, ServerConnectionService.class));
         }
         else if (message.equals("Prohibited Process Running"))
         {
@@ -295,9 +321,9 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
                 object.addProperty(Constants.KEY_IDENTIFIER, Constants.KEY_SYNC_STATE);
                 object.addProperty(Constants.KEY_VALUE, Constants.VALUE_SYNC_RESPONSE_ACK);
 
-                this.connectionThread.write(messageBuilder.toJson(object));
+                connectionService.write(messageBuilder.toJson(object));
 
-                if (!this.serverSyncUpInitialised)
+                if (!serverSyncUpInitialised)
                 {
                     appBarLayout = (AppBarLayout) findViewById(R.id.app_bar_layout);
                     toolbar = (Toolbar) findViewById(R.id.toolbar);
@@ -311,7 +337,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
 
                     progressDialog.dismiss();
 
-                    this.serverSyncUpInitialised = true;
+                    serverSyncUpInitialised = true;
 
                     ViewUtils.setViewAndChildrenVisibility(parentView, View.VISIBLE);
                 }
@@ -362,14 +388,14 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
     {
         if (message.equals(ClientCommands.END_SESSION.toString()))
         {
-            connectionThread.close();
+            connectionService.close();
         }
     }
 
     @Override
     public void onMessageFailure(String message)
     {
-        connectionThread.close();
+        connectionService.close();
     }
 
     @Override
@@ -385,14 +411,14 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
         object.addProperty(Constants.KEY_IDENTIFIER, Constants.KEY_SYNC_STATE);
         object.addProperty(Constants.KEY_VALUE, Constants.VALUE_SYNC_REQUEST);
 
-        this.connectionThread.write(messageBuilder.toJson(object));
+        connectionService.write(messageBuilder.toJson(object));
     }
 
     @Override
     public void onConnectionAborted()
     {
         Intent intent = new Intent();
-        intent.putExtra(DEVICE_KEY, targetDevice);
+        intent.putExtra(DEVICE_KEY, connectionService.getTargetDevice());
 
         ActivityUtils.finish(this, RESULT_OK, intent);
     }
@@ -462,7 +488,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
                         object.addProperty(Constants.KEY_NAME, fileNameWithExtension);
                         object.addProperty(Constants.KEY_VALUE, new String(fileBytes));
 
-                        connectionThread.write(messageBuilder.toJson(object));
+                        connectionService.write(messageBuilder.toJson(object));
                     }
                     else
                     {
@@ -606,12 +632,10 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
         previousTab = InteractionTab.NOT_SET;
     }
 
-    private void prepareBluetoothHandlers()
+    private void prepareHandlers()
     {
-        messageHandler = new BluetoothMessageHandler(this);
-        // TODO: pass down the password that will create the server endpoint out of it as a UUID
-        connectionThread = new BluetoothConnectionThread(SERVER_ENDPOINT, targetDevice, messageHandler);
-        gestureHandler = new BluetoothGestureEventHandler(this, connectionThread, MOUSE_SENSITIVITY);
+        messageHandler = new ServerMessageHandler(this, this);
+        gestureHandler = new GestureEventHandler(this, MOUSE_SENSITIVITY);
     }
 
     private void fadeOutPreviousTab(Menu menu)
@@ -728,7 +752,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
                                 object.addProperty(Constants.KEY_IDENTIFIER, Constants.KEY_COMMAND);
                                 object.addProperty(Constants.KEY_VALUE, sendValue);
 
-                                connectionThread.write(messageBuilder.toJson(object));
+                                connectionService.write(messageBuilder.toJson(object));
                             }
 
                             return true;
@@ -798,7 +822,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
                 object.addProperty(Constants.KEY_IDENTIFIER, Constants.KEY_VOICE);
                 object.addProperty(Constants.KEY_VALUE, "lock_machine");
 
-                connectionThread.write(messageBuilder.toJson(object));
+                connectionService.write(messageBuilder.toJson(object));
             }
         });
 
@@ -863,7 +887,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
             @Override
             public void onClick(View v)
             {
-                ActivityUtils.simpleStartActivityForResult(DeviceInteractionActivity.this, ClipboardManagerActivity.class, REUEST_CLIPBOARD_MANAGER);
+                ActivityUtils.simpleStartActivityForResult(DeviceInteractionActivity.this, ClipboardManagerActivity.class, REQUEST_CLIPBOARD_MANAGER);
             }
         });
 
@@ -879,7 +903,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
                 object.addProperty(Constants.KEY_VOLUME_ENABLED, true);
                 object.addProperty(Constants.KEY_VALUE, progress);
 
-                connectionThread.write(messageBuilder.toJson(object));
+                connectionService.write(messageBuilder.toJson(object));
             }
 
             @Override
@@ -910,7 +934,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
                 object.addProperty(Constants.KEY_IDENTIFIER, Constants.KEY_SCREEN);
                 object.addProperty(Constants.KEY_VALUE, progress);
 
-                connectionThread.write(messageBuilder.toJson(object));
+                connectionService.write(messageBuilder.toJson(object));
             }
 
             @Override
@@ -991,7 +1015,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
                     json.addProperty(Constants.KEY_BATTERY_STATE, Constants.VALUE_CHARGE_OK);
                 }
 
-                connectionThread.write(messageBuilder.toJson(json));
+                connectionService.write(messageBuilder.toJson(json));
             }
         }
     };
@@ -1006,7 +1030,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
             json.addProperty(Constants.KEY_IDENTIFIER, Constants.KEY_VOLUME);
             json.addProperty(Constants.KEY_VOLUME_ENABLED, isChecked);
 
-            connectionThread.write(messageBuilder.toJson(json)); // true for mute
+            connectionService.write(messageBuilder.toJson(json)); // true for mute
         }
     }
 
@@ -1063,7 +1087,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements OnBl
                 object.addProperty(Constants.KEY_IDENTIFIER, Constants.KEY_VOICE);
                 object.addProperty(Constants.KEY_VALUE, recognisedText);
 
-                connectionThread.write(messageBuilder.toJson(object));
+                connectionService.write(messageBuilder.toJson(object));
             }
         }
 
