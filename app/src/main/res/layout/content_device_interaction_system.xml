@@ -42,7 +42,7 @@
                         android:layout_height="48dp"
                         android:layout_margin="8dp"
                         android:scaleType="centerInside"
-                        android:src="@drawable/ic_lock_outline_black_48dp"
+                        android:src="@drawable/ic_lock_outline_black"
                         android:background="?attr/selectableItemBackgroundBorderless" />
 
                     <ImageButton
@@ -51,7 +51,7 @@
                         android:layout_height="48dp"
                         android:layout_margin="8dp"
                         android:scaleType="centerInside"
-                        android:src="@drawable/ic_autorenew_black_48dp"
+                        android:src="@drawable/ic_autorenew_black"
                         android:background="?attr/selectableItemBackgroundBorderless" />
 
                     <ImageButton
@@ -60,7 +60,7 @@
                         android:layout_height="48dp"
                         android:layout_margin="8dp"
                         android:scaleType="centerInside"
-                        android:src="@drawable/ic_power_settings_new_black_48dp"
+                        android:src="@drawable/ic_power_settings_new_black"
                         android:background="?attr/selectableItemBackgroundBorderless" />
 
                 </LinearLayout>

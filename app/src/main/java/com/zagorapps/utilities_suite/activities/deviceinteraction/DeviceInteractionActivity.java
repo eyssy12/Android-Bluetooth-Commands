@@ -539,7 +539,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements Serv
 
     private void prepareMachineAlertDialog()
     {
-        this.machineLockedDialog = new AlertDialog.Builder(this).setTitle("Machine Locked").setIcon(R.drawable.ic_phonelink_lock_black_48dp).setCancelable(false).create();
+        this.machineLockedDialog = new AlertDialog.Builder(this).setTitle("Machine Locked").setIcon(R.drawable.ic_phonelink_lock).setCancelable(false).create();
 
         // TODO: this is not working, should investigate
         WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
@@ -587,10 +587,10 @@ public class DeviceInteractionActivity extends AppCompatActivity implements Serv
         Pair<Integer, Integer> viewPagerTabLayoutResIds = new Pair<>(R.id.device_interaction_view_pager, R.id.device_interaction_tabs);
 
         List<TabPageMetadata> inflatablePageMetadata = new ArrayList<>();
-        inflatablePageMetadata.add(new TabPageMetadata(InteractionTab.MOUSE, R.layout.content_device_interaction_mouse, R.drawable.ic_mouse_white_48dp));
-        inflatablePageMetadata.add(new TabPageMetadata(InteractionTab.KEYBOARD, R.layout.content_device_interaction_keyboard, R.drawable.ic_keyboard_white_48dp));
-        inflatablePageMetadata.add(new TabPageMetadata(InteractionTab.SYSTEM, R.layout.content_device_interaction_system, R.drawable.ic_assignment_white_48dp));
-        inflatablePageMetadata.add(new TabPageMetadata(InteractionTab.VOICE, R.layout.content_device_interaction_voice, R.drawable.ic_record_voice_over_white_48dp));
+        inflatablePageMetadata.add(new TabPageMetadata(InteractionTab.MOUSE, R.layout.content_device_interaction_mouse, R.drawable.ic_mouse));
+        inflatablePageMetadata.add(new TabPageMetadata(InteractionTab.KEYBOARD, R.layout.content_device_interaction_keyboard, R.drawable.ic_keyboard_white));
+        inflatablePageMetadata.add(new TabPageMetadata(InteractionTab.SYSTEM, R.layout.content_device_interaction_system, R.drawable.ic_assignment_white));
+        inflatablePageMetadata.add(new TabPageMetadata(InteractionTab.VOICE, R.layout.content_device_interaction_voice, R.drawable.ic_record_voice_over_white));
 
         ViewPager.OnPageChangeListener changeListener = new ViewPager.OnPageChangeListener()
         {

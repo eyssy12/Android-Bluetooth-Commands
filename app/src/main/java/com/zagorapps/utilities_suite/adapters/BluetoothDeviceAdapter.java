@@ -55,7 +55,7 @@ public class BluetoothDeviceAdapter extends RecyclerViewAdapterBase<BluetoothDev
             public void onClick(View v)
             {
                 AlertDialog.Builder builder = new AlertDialog.Builder(context);
-                AlertDialog dialog = builder.setTitle("Options").setIcon(R.drawable.options).setItems(ITEMS, new DialogInterface.OnClickListener()
+                AlertDialog dialog = builder.setTitle("Options").setIcon(R.drawable.ic_toc_black).setItems(ITEMS, new DialogInterface.OnClickListener()
                 {
                     // TODO: change this to setAdapter instead to customise the dialog better with icons
                     // display image buttons for "Connect", "Remove from list"

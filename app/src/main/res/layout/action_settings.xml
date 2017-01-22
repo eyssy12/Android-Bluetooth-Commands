@@ -9,7 +9,7 @@
         android:id="@+id/iv_action_upload"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:src="@drawable/ic_settings_white_48dp"
+        android:src="@drawable/ic_settings_white"
         android:padding="12dp"/>
 
 </RelativeLayout>
