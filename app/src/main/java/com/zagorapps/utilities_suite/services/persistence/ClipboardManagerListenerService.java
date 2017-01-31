@@ -1,4 +1,4 @@
-package com.zagorapps.utilities_suite.services.persistent;
+package com.zagorapps.utilities_suite.services.persistence;
 
 import android.app.Service;
 import android.content.ClipData;

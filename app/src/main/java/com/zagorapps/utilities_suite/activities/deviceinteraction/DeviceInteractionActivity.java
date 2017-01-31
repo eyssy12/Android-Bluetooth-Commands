@@ -55,6 +55,7 @@ import com.zagorapps.utilities_suite.protocol.ClientCommands;
 import com.zagorapps.utilities_suite.protocol.Constants;
 import com.zagorapps.utilities_suite.protocol.MessageBuilder;
 import com.zagorapps.utilities_suite.protocol.ServerCommands;
+import com.zagorapps.utilities_suite.services.ConnectionActiveHeadService;
 import com.zagorapps.utilities_suite.services.net.ServerConnectionService;
 import com.zagorapps.utilities_suite.state.InteractionTab;
 import com.zagorapps.utilities_suite.state.models.TabPageMetadata;
@@ -315,6 +316,8 @@ public class DeviceInteractionActivity extends AppCompatActivity implements Serv
 
             if (data[0].equals(Constants.VALUE_SYNC_RESPONSE))
             {
+                startService(new Intent(this, ConnectionActiveHeadService.class));
+
                 // TODO: return all data for the sync operation
 
                 JsonObject object = messageBuilder.getBaseObject();
@@ -401,6 +404,8 @@ public class DeviceInteractionActivity extends AppCompatActivity implements Serv
     @Override
     public void onConnectionFailed()
     {
+        stopService(new Intent(this, ConnectionActiveHeadService.class));
+
         ActivityUtils.finish(this, RESULT_CANCELED);
     }
 
@@ -417,6 +422,8 @@ public class DeviceInteractionActivity extends AppCompatActivity implements Serv
     @Override
     public void onConnectionAborted()
     {
+        stopService(new Intent(this, ConnectionActiveHeadService.class));
+
         Intent intent = new Intent();
         intent.putExtra(DEVICE_KEY, connectionService.getTargetDevice());
 

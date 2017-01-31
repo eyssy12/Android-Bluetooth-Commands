@@ -4,7 +4,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 
-import com.zagorapps.utilities_suite.services.persistent.ClipboardManagerListenerService;
+import com.zagorapps.utilities_suite.services.persistence.ClipboardManagerListenerService;
 
 /**
  * Created by eyssy on 21/01/2017.
