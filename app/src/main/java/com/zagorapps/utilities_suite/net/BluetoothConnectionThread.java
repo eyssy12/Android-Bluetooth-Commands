@@ -1,4 +1,4 @@
-package com.zagorapps.utilities_suite.threading;
+package com.zagorapps.utilities_suite.net;
 
 import android.bluetooth.BluetoothSocket;
 import android.os.Message;
@@ -9,7 +9,7 @@ import com.zagorapps.utilities_suite.enumerations.ConnectionState;
 import com.zagorapps.utilities_suite.handlers.HandlerBase;
 import com.zagorapps.utilities_suite.state.models.BluetoothDeviceLite;
 import com.zagorapps.utilities_suite.utils.data.CollectionUtils;
-import com.zagorapps.utilities_suite.utils.data.TextUtils;
+import com.zagorapps.utilities_suite.utils.data.StringUtils;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -142,13 +142,13 @@ public class BluetoothConnectionThread extends Thread
     {
         byte[] header;
 
-        if (payload.length <= 1024)
+        if (payload.length <= 2048)
         {
-            header = CollectionUtils.padBytes(TextUtils.getBytesForCharset(String.valueOf(payload.length), TextUtils.CHARSET_UTF_8), 4);
+            header = CollectionUtils.padBytes(StringUtils.getBytesForCharset(String.valueOf(payload.length), StringUtils.CHARSET_UTF_8), 4);
         }
         else
         {
-            header = TextUtils.getBytesForCharset(String.valueOf(payload.length), TextUtils.CHARSET_UTF_8);
+            header = StringUtils.getBytesForCharset(String.valueOf(payload.length), StringUtils.CHARSET_UTF_8);
         }
 
         byte[] headerWithPayload = CollectionUtils.concat(header, payload);
@@ -158,16 +158,16 @@ public class BluetoothConnectionThread extends Thread
 
     public void write(String payload)
     {
-        byte[] payloadBytes = TextUtils.getBytesForCharset(payload, TextUtils.CHARSET_UTF_8);
+        byte[] payloadBytes = StringUtils.getBytesForCharset(payload, StringUtils.CHARSET_UTF_8);
         byte[] header;
 
-        if (payloadBytes.length <= 1024)
+        if (payloadBytes.length <= 2048)
         {
-            header = CollectionUtils.padBytes(TextUtils.getBytesForCharset(String.valueOf(payloadBytes.length), TextUtils.CHARSET_UTF_8), 4);
+            header = CollectionUtils.padBytes(StringUtils.getBytesForCharset(String.valueOf(payloadBytes.length), StringUtils.CHARSET_UTF_8), 4);
         }
         else
         {
-            header = TextUtils.getBytesForCharset(String.valueOf(payloadBytes.length), TextUtils.CHARSET_UTF_8);
+            header = StringUtils.getBytesForCharset(String.valueOf(payloadBytes.length), StringUtils.CHARSET_UTF_8);
         }
 
         byte[] headerWithPayload = CollectionUtils.concat(header, payloadBytes);
@@ -181,7 +181,7 @@ public class BluetoothConnectionThread extends Thread
         {
             writer.write(buffer, offset, count);
 
-            // String message = TextUtils.decodeBytesFromCharset(TextUtils.trimBytes(buffer), TextUtils.CHARSET_UTF_8);
+            // String message = StringUtils.decodeBytesFromCharset(StringUtils.trimBytes(buffer), StringUtils.CHARSET_UTF_8);
 
             sendHandlerMessage(MESSAGE_SENT, count, -1, buffer);
         }

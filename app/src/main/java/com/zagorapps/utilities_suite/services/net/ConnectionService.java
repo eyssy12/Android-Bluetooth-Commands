@@ -11,8 +11,8 @@ import android.util.Log;
 import com.zagorapps.utilities_suite.activities.deviceinteraction.DeviceInteractionActivity;
 import com.zagorapps.utilities_suite.enumerations.ConnectionState;
 import com.zagorapps.utilities_suite.handlers.ServerMessageHandler;
+import com.zagorapps.utilities_suite.net.BluetoothConnectionThread;
 import com.zagorapps.utilities_suite.state.models.BluetoothDeviceLite;
-import com.zagorapps.utilities_suite.threading.BluetoothConnectionThread;
 
 import java.io.UnsupportedEncodingException;
 import java.util.UUID;
@@ -21,7 +21,7 @@ import java.util.UUID;
  * Created by eyssy on 22/01/2017.
  */
 
-public class ServerConnectionService extends Service
+public class ConnectionService extends Service
 {
     private final IBinder binder = new ServerConnectionBinder();
 
@@ -115,9 +115,9 @@ public class ServerConnectionService extends Service
 
     public class ServerConnectionBinder extends Binder
     {
-        public ServerConnectionService getService()
+        public ConnectionService getService()
         {
-            return ServerConnectionService.this;
+            return ConnectionService.this;
         }
     }
 }

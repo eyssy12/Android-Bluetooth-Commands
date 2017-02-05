@@ -18,7 +18,7 @@ import org.joda.time.DateTime;
  * Created by eyssy on 21/01/2017.
  */
 
-public class ClipboardManagerListenerService extends Service
+public class ClipboardService extends Service
 {
     private ClipboardManager manager;
     private ComplexPreferences complexPreferences;
@@ -64,7 +64,7 @@ public class ClipboardManagerListenerService extends Service
         manager = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
         manager.addPrimaryClipChangedListener(listener);
 
-        complexPreferences = ComplexPreferences.getComplexPreferences(ClipboardManagerListenerService.this, MODE_PRIVATE);
+        complexPreferences = ComplexPreferences.getComplexPreferences(ClipboardService.this, MODE_PRIVATE);
     }
 
     @Override

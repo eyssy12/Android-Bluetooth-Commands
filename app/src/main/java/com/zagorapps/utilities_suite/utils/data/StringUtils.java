@@ -9,11 +9,16 @@ import java.util.ArrayList;
 /**
  * Created by eyssy on 16/07/2016.
  */
-public class TextUtils
+public class StringUtils
 {
     public static final char BYTE_NULL_INDICATOR = 0;
 
     public static final String CHARSET_UTF_8 = "UTF-8";
+
+    public static boolean isValid(String data)
+    {
+        return !StringUtils.isEmpty(data);
+    }
 
     public static boolean isEmpty(String data)
     {

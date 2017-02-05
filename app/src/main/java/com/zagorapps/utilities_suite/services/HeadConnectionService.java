@@ -16,20 +16,23 @@ import com.facebook.rebound.BaseSpringSystem;
 import com.facebook.rebound.Spring;
 import com.facebook.rebound.SpringConfig;
 import com.zagorapps.utilities_suite.R;
+import com.zagorapps.utilities_suite.UtilitiesSuiteApplication;
 import com.zagorapps.utilities_suite.activities.deviceinteraction.DeviceInteractionActivity;
 
 /**
  * Created by eyssy on 31/01/2017.
  */
 
-public class ConnectionActiveHeadService extends Service// implements SpringListener, SpringSystemListener
+public class HeadConnectionService extends Service// implements SpringListener, SpringSystemListener
 {
     private BaseSpringSystem springSystem;
     private Spring springX, springY;
     private SpringConfig config;
 
+    private UtilitiesSuiteApplication application;
+
     private WindowManager windowManager;
-    private WindowManager.LayoutParams windowLayout;
+    private WindowManager.LayoutParams restedWindowLayout, activeWindowLayout;
 
     private int initialX;
     private int initialY;
@@ -44,6 +47,8 @@ public class ConnectionActiveHeadService extends Service// implements SpringList
     public void onCreate()
     {
         super.onCreate();
+
+        application = (UtilitiesSuiteApplication) getApplicationContext();
 
         // TODO: Investigate using Spring to make the move animation smoother
 //        springSystem = SpringSystem.create();
@@ -64,14 +69,21 @@ public class ConnectionActiveHeadService extends Service// implements SpringList
 
         gestureDetector = new GestureDetector(this, new SimpleGestureListener());
 
-        windowLayout = new WindowManager.LayoutParams(
+        restedWindowLayout = new WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.TYPE_PHONE,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
             PixelFormat.TRANSLUCENT);
 
-        windowLayout.gravity = Gravity.END | Gravity.CENTER_HORIZONTAL;
+        activeWindowLayout = new WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT - 2,
+            WindowManager.LayoutParams.WRAP_CONTENT - 2,
+            WindowManager.LayoutParams.TYPE_PHONE,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+            PixelFormat.TRANSLUCENT);
+
+        restedWindowLayout.gravity = Gravity.END | Gravity.CENTER_HORIZONTAL;
 
         headView.setOnTouchListener(new View.OnTouchListener()
         {
@@ -81,9 +93,9 @@ public class ConnectionActiveHeadService extends Service// implements SpringList
                 // if clicked
                 if (gestureDetector.onTouchEvent(event))
                 {
-                    Intent intent = new Intent(ConnectionActiveHeadService.this, DeviceInteractionActivity.class);
+                    Intent intent = new Intent(HeadConnectionService.this, DeviceInteractionActivity.class);
                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    ConnectionActiveHeadService.this.startActivity(intent);
+                    HeadConnectionService.this.startActivity(intent);
 
                     return true;
                 }
@@ -92,13 +104,14 @@ public class ConnectionActiveHeadService extends Service// implements SpringList
                     switch (event.getAction())
                     {
                         case MotionEvent.ACTION_DOWN:
-                            initialX = windowLayout.x;
-                            initialY = windowLayout.y;
+                            initialX = restedWindowLayout.x;
+                            initialY = restedWindowLayout.y;
                             initialTouchX = event.getRawX();
                             initialTouchY = event.getRawY();
-
+                            
                             return true;
                         case MotionEvent.ACTION_UP:
+                            
                             return true;
                         case MotionEvent.ACTION_MOVE:
 
@@ -107,21 +120,24 @@ public class ConnectionActiveHeadService extends Service// implements SpringList
 //                            springX.setCurrentValue(springX.getCurrentValue() - offsetX).setAtRest();
 //                            springY.setCurrentValue(springY.getCurrentValue() - offsetY).setAtRest();
 
-                            // TODO: for some reason, X axis is inverted
-                            windowLayout.x = -(initialX + (int) (event.getRawX() - initialTouchX));
-                            windowLayout.y = initialY + (int) (event.getRawY() - initialTouchY);
+//                            restedWindowLayout.x = (int)springX.getCurrentValue();
+//                            restedWindowLayout.y = (int)springY.getCurrentValue();
 
-//                            windowLayout.x = (int)springX.getCurrentValue();
-//                            windowLayout.y = (int)springY.getCurrentValue();
-                            windowManager.updateViewLayout(headView, windowLayout);
+                            // TODO: for some reason, X axis is inverted
+                            restedWindowLayout.x = initialX + (int) -(event.getRawX() - initialTouchX);
+                            restedWindowLayout.y = initialY + (int) (event.getRawY() - initialTouchY);
+
+                            windowManager.updateViewLayout(headView, restedWindowLayout);
+
                             return true;
+                        default:
+                            return false;
                     }
-                    return false;
                 }
             }
         });
 
-        windowManager.addView(headView, windowLayout);
+        windowManager.addView(headView, restedWindowLayout);
     }
 
     @Override

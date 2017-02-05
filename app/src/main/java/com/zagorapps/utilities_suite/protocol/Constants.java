@@ -9,10 +9,14 @@ import java.text.SimpleDateFormat;
 public class Constants
 {
     public static final String KEY_IDENTIFIER = "id",
+        KEY_ACTION = "action",
         KEY_FILE = "file",
         KEY_NAME = "name",
+        KEY_TOTAL = "total",
+        KEY_CHECKSUM = "checksum",
         KEY_TYPE = "type",
         KEY_VALUE = "value",
+        KEY_REMAINING = "remaining",
         KEY_COMMAND = "cmd",
         KEY_VOICE = "voice",
         KEY_VOLUME = "vol",
@@ -26,6 +30,10 @@ public class Constants
         KEY_BATTERY_CHARGE_TYPE = "chargeType",
         KEY_BATTERY_CHARGING = "batCharge",
         KEY_SYNC_STATE = "syncState";
+
+    public static final String VALUE_BEGIN_FILE_TRANSFER = "beginFileTransfer",
+        VALUE_FILE_SENDING = "fileSending",
+        VALUE_FILE_SENT = "fileSent";
 
     public static final String VALUE_CHARGE_OK = "ok",
         VALUE_CHARGE_LOW = "low",

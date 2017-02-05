@@ -19,7 +19,8 @@ public abstract class RecyclerViewAdapterBase<T, VH extends RecyclerView.ViewHol
     protected final View parentView;
 
     protected int selectedPosition = -1;
-    protected final Object mutex;
+
+    private final Object mutex;
 
     protected RecyclerViewAdapterBase(Context context, View parentView)
     {

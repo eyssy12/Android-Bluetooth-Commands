@@ -16,7 +16,7 @@ import com.zagorapps.utilities_suite.interfaces.SimpleHandler;
 import com.zagorapps.utilities_suite.protocol.ClientCommands;
 import com.zagorapps.utilities_suite.protocol.Constants;
 import com.zagorapps.utilities_suite.protocol.MessageBuilder;
-import com.zagorapps.utilities_suite.services.net.ServerConnectionService;
+import com.zagorapps.utilities_suite.services.net.ConnectionService;
 import com.zagorapps.utilities_suite.state.models.MotionDistance;
 
 /**
@@ -27,7 +27,7 @@ public class GestureEventHandler implements GestureDetector.OnGestureListener, G
     private MessageBuilder messageBuilder;
 
     private Context context;
-    private ServerConnectionService connectionService;
+    private ConnectionService connectionService;
 
     private GestureDetectorCompat gestureDetector;
 
@@ -73,7 +73,7 @@ public class GestureEventHandler implements GestureDetector.OnGestureListener, G
             gestureDetector = new GestureDetectorCompat(context, this);
             gestureDetector.setOnDoubleTapListener(this);
 
-            Intent intent = new Intent(context, ServerConnectionService.class);
+            Intent intent = new Intent(context, ConnectionService.class);
             context.bindService(intent, binderService, Context.BIND_AUTO_CREATE);
         }
     }
@@ -162,7 +162,7 @@ public class GestureEventHandler implements GestureDetector.OnGestureListener, G
         public void onServiceConnected(ComponentName className, IBinder service)
         {
             // We've bound to LocalService, cast the IBinder and get LocalService instance
-            ServerConnectionService.ServerConnectionBinder binder = (ServerConnectionService.ServerConnectionBinder) service;
+            ConnectionService.ServerConnectionBinder binder = (ConnectionService.ServerConnectionBinder) service;
             connectionService = binder.getService();
 
             serviceBounded = true;

@@ -32,4 +32,5 @@ dependencies {
     compile 'com.google.code.gson:gson:2.7'
     compile "me.leolin:ShortcutBadger:1.1.10@aar"
     compile 'me.dm7.barcodescanner:zxing:1.8.4'
+    compile 'com.nononsenseapps:filepicker:4.0.0'
 }

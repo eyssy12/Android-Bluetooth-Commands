@@ -8,8 +8,10 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.net.Uri;
 import android.os.BatteryManager;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.IBinder;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
@@ -20,6 +22,7 @@ import android.support.v4.view.ViewPager;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Base64;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -28,9 +31,6 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
-import android.view.animation.AccelerateInterpolator;
-import android.view.animation.Animation;
-import android.view.animation.AnimationUtils;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
@@ -45,35 +45,37 @@ import android.widget.Toast;
 import android.widget.ToggleButton;
 
 import com.google.gson.JsonObject;
+import com.nononsenseapps.filepicker.FilePickerActivity;
 import com.squareup.picasso.Picasso;
 import com.zagorapps.utilities_suite.R;
+import com.zagorapps.utilities_suite.UtilitiesSuiteApplication;
 import com.zagorapps.utilities_suite.custom.TabbedViewPager;
 import com.zagorapps.utilities_suite.handlers.GestureEventHandler;
 import com.zagorapps.utilities_suite.handlers.ServerMessageHandler;
+import com.zagorapps.utilities_suite.interfaces.FileSenderListener;
 import com.zagorapps.utilities_suite.interfaces.ServerMessagingListener;
+import com.zagorapps.utilities_suite.managers.FileSenderManager;
+import com.zagorapps.utilities_suite.models.QueuedFile;
 import com.zagorapps.utilities_suite.protocol.ClientCommands;
 import com.zagorapps.utilities_suite.protocol.Constants;
 import com.zagorapps.utilities_suite.protocol.MessageBuilder;
 import com.zagorapps.utilities_suite.protocol.ServerCommands;
-import com.zagorapps.utilities_suite.services.ConnectionActiveHeadService;
-import com.zagorapps.utilities_suite.services.net.ServerConnectionService;
+import com.zagorapps.utilities_suite.services.HeadConnectionService;
+import com.zagorapps.utilities_suite.services.net.ConnectionService;
 import com.zagorapps.utilities_suite.state.InteractionTab;
 import com.zagorapps.utilities_suite.state.models.TabPageMetadata;
-import com.zagorapps.utilities_suite.utils.data.FileUtils;
 import com.zagorapps.utilities_suite.utils.data.NumberUtils;
 import com.zagorapps.utilities_suite.utils.threading.RunnableUtils;
 import com.zagorapps.utilities_suite.utils.view.ActivityUtils;
 import com.zagorapps.utilities_suite.utils.view.SystemMessagingUtils;
 import com.zagorapps.utilities_suite.utils.view.ViewUtils;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-public class DeviceInteractionActivity extends AppCompatActivity implements ServerMessagingListener
+public class DeviceInteractionActivity extends AppCompatActivity implements ServerMessagingListener, FileSenderListener
 {
     public static final String DEVICE_KEY = "device", MOUSE_SENSITIVITY_KEY = "mouse_sensitivity";
 
@@ -96,7 +98,6 @@ public class DeviceInteractionActivity extends AppCompatActivity implements Serv
     private Toolbar toolbar;
     private TabbedViewPager tabbedViewPager;
     private InteractionTab currentTab, previousTab;
-    private Animation fadeInAnimation, fadeOutAnimation;
 
     // Mouse View
     private ProgressDialog progressDialog;
@@ -114,6 +115,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements Serv
     // System View
     private SeekBar systemVolumeSeekBar;
     private SeekBar.OnSeekBarChangeListener systemVolumeSeekBarChangeListener;
+
     private ToggleButton muteButton;
     private ToggleButtonCheckedChangeListener muteButtonCheckedChangeListener;
     
@@ -122,11 +124,15 @@ public class DeviceInteractionActivity extends AppCompatActivity implements Serv
 
     private AlertDialog.Builder systemControlDialogBuilder;
 
+    private FileSenderManager fileSenderManager;
+
     // Specifics
+    private UtilitiesSuiteApplication application;
+
     private ServerMessageHandler messageHandler;
     private GestureEventHandler gestureHandler;
 
-    private ServerConnectionService connectionService;
+    private ConnectionService connectionService;
     private boolean serviceBounded = false;
 
     private String[] initialSyncData;
@@ -159,7 +165,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements Serv
 
     private void beginInteraction(Bundle extras)
     {
-        Intent intent = new Intent(this, ServerConnectionService.class);
+        Intent intent = new Intent(this, ConnectionService.class);
         intent.putExtras(extras); // pass on the target device bundle to service
 
         startService(intent);
@@ -171,7 +177,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements Serv
         @Override
         public void onServiceConnected(ComponentName className, IBinder service)
         {
-            ServerConnectionService.ServerConnectionBinder binder = (ServerConnectionService.ServerConnectionBinder) service;
+            ConnectionService.ServerConnectionBinder binder = (ConnectionService.ServerConnectionBinder) service;
 
             connectionService = binder.getService();
             connectionService.subscribe(messageHandler);
@@ -296,7 +302,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements Serv
             gestureHandler.stopHandler();
 
             unbindService(binderService);
-            stopService(new Intent(this, ServerConnectionService.class));
+            stopService(new Intent(this, ConnectionService.class));
         }
         else if (message.equals("Prohibited Process Running"))
         {
@@ -316,7 +322,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements Serv
 
             if (data[0].equals(Constants.VALUE_SYNC_RESPONSE))
             {
-                startService(new Intent(this, ConnectionActiveHeadService.class));
+                startService(new Intent(this, HeadConnectionService.class));
 
                 // TODO: return all data for the sync operation
 
@@ -352,6 +358,24 @@ public class DeviceInteractionActivity extends AppCompatActivity implements Serv
                 screenBrightnessSeekBar.setOnSeekBarChangeListener(null);
                 screenBrightnessSeekBar.setProgress(value);
                 screenBrightnessSeekBar.setOnSeekBarChangeListener(screenBrightnessSeekBarChangeListener);
+            }
+            else if (data[0].equals("file"))
+            {
+                String[] split = data[1].split("_");
+                String responseKey = split[1];
+
+                if (responseKey.equals("readyForSending"))
+                {
+                    fileSenderManager.beginSendQueuedFile();
+                }
+                else if (responseKey.equals("chunkAccepted"))
+                {
+                    fileSenderManager.sendNextAvailable();
+                }
+                else if (responseKey.equals("finished"))
+                {
+                    fileSenderManager.finalizeQueuedFile();
+                }
             }
             else if (data[0].equals("vol"))
             {
@@ -404,7 +428,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements Serv
     @Override
     public void onConnectionFailed()
     {
-        stopService(new Intent(this, ConnectionActiveHeadService.class));
+        stopService(new Intent(this, HeadConnectionService.class));
 
         ActivityUtils.finish(this, RESULT_CANCELED);
     }
@@ -422,7 +446,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements Serv
     @Override
     public void onConnectionAborted()
     {
-        stopService(new Intent(this, ConnectionActiveHeadService.class));
+        stopService(new Intent(this, HeadConnectionService.class));
 
         Intent intent = new Intent();
         intent.putExtra(DEVICE_KEY, connectionService.getTargetDevice());
@@ -457,58 +481,33 @@ public class DeviceInteractionActivity extends AppCompatActivity implements Serv
         {
             if (resultCode == RESULT_OK)
             {
-                String filepath = FileUtils.getPath(this, data.getData());
-
-                String[] split = filepath.split("/");
-                String fileNameWithExtension = split[split.length - 1];
-
-                try
+                if (data.getExtras() == null || data.getBooleanExtra(FilePickerActivity.EXTRA_ALLOW_MULTIPLE, false))
                 {
-                    FileInputStream stream = new FileInputStream(filepath);
+                    // The URI will now be something like content://PACKAGE-NAME/root/path/to/file
+                    Uri uri = data.getData();
+                    // A utility method is provided to transform the URI to a File object
+                    File file = com.nononsenseapps.filepicker.Utils.getFileForUri(uri);
 
-                    if (stream.available() <= 1024)
+                    QueuedFile queuedFile = new QueuedFile(file);
+
+                    fileSenderManager.enqueue(file);
+                }
+                else
+                {
+                    // Handling multiple results is one extra step
+                    ArrayList<String> paths = data.getStringArrayListExtra(FilePickerActivity.EXTRA_PATHS);
+                    if (paths != null)
                     {
-                        byte[] fileBytes = new byte[stream.available()];
-
-                        byte byteValue;
-                        int index = 0;
-                        while((byteValue = (byte)stream.read()) != -1)
+                        for (String path: paths)
                         {
-                            fileBytes[index] = byteValue;
-
-                            index++;
+                            Uri uri = Uri.parse(path);
+                            // Do something with the URI
+                            File file = com.nononsenseapps.filepicker.Utils.getFileForUri(uri);
+                            // If you want a URI which matches the old return value, you can do
+                            Uri fileUri = Uri.fromFile(file);
+                            // Do something with the result...
                         }
-
-                        // TODO: delegate this task over to a FileSenderManager that will have a "enqueue" method taking in the String path
-                        // TODO: implement ability to send larger files by utilising chunking
-                        // determine all available bytes
-                        // divide by packet size
-                        // each packet should have an id/order that the server can verify
-                        // file sending ideally should be async (shouldn't block the ui, altho I'm not sure what impact would running the other commands have while a file is being delivered)
-                        // might be best to not allow intereaction while file(s) are being sent
-                        // -----------------------------
-                        // File sending operations should have a progress dialog to indicate progress.
-                        // Display in UI (and also maybe on the android top toolbar?)
-
-                        JsonObject object = messageBuilder.getBaseObject();
-                        object.addProperty(Constants.KEY_IDENTIFIER, Constants.KEY_FILE);
-                        object.addProperty(Constants.KEY_NAME, fileNameWithExtension);
-                        object.addProperty(Constants.KEY_VALUE, new String(fileBytes));
-
-                        connectionService.write(messageBuilder.toJson(object));
                     }
-                    else
-                    {
-                        SystemMessagingUtils.showShortToast(this, "File too large to send.");
-                    }
-                }
-                catch (FileNotFoundException e)
-                {
-                    e.printStackTrace();
-                }
-                catch (IOException e)
-                {
-                    e.printStackTrace();
                 }
             }
         }
@@ -526,22 +525,16 @@ public class DeviceInteractionActivity extends AppCompatActivity implements Serv
 
     private void prepareStatics()
     {
-        this.fadeInAnimation = AnimationUtils.loadAnimation(this, android.R.anim.fade_in);
-        this.fadeInAnimation.setInterpolator(new AccelerateInterpolator());
-        this.fadeInAnimation.setDuration(200);
+        application = (UtilitiesSuiteApplication) getApplicationContext();
 
-        this.fadeOutAnimation = AnimationUtils.loadAnimation(this, android.R.anim.fade_out);
-        this.fadeOutAnimation.setInterpolator(new AccelerateInterpolator());
-        this.fadeOutAnimation.setDuration(200);
+        messageBuilder = MessageBuilder.DefaultInstance();
 
-        this.messageBuilder = MessageBuilder.DefaultInstance();
+        deviceChargeStateFilter = new IntentFilter();
+        deviceChargeStateFilter.addAction(Intent.ACTION_BATTERY_CHANGED);
+        deviceChargeStateFilter.addAction(Intent.ACTION_BATTERY_LOW);
+        deviceChargeStateFilter.addAction(Intent.ACTION_BATTERY_OKAY);
 
-        this.deviceChargeStateFilter = new IntentFilter();
-        this.deviceChargeStateFilter.addAction(Intent.ACTION_BATTERY_CHANGED);
-        this.deviceChargeStateFilter.addAction(Intent.ACTION_BATTERY_LOW);
-        this.deviceChargeStateFilter.addAction(Intent.ACTION_BATTERY_OKAY);
-
-        this.registerReceiver(this.batteryStateReceiver, this.deviceChargeStateFilter);
+        registerReceiver(batteryStateReceiver, deviceChargeStateFilter);
     }
 
     private void prepareMachineAlertDialog()
@@ -691,7 +684,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements Serv
             public void onClick(View v)
             {
                 // hide all the current views
-                ViewUtils.setViewAndChildrenVisibility(mouseTouchPadInteractiveViews, View.GONE, fadeOutAnimation);
+                ViewUtils.setViewAndChildrenVisibility(mouseTouchPadInteractiveViews, View.GONE, application.getFadeOutAnimation());
 
                 final TextView characterDisplayView;
                 if (keyboardInteractionInitiated)
@@ -713,9 +706,9 @@ public class DeviceInteractionActivity extends AppCompatActivity implements Serv
                                     @Override
                                     public void run()
                                     {
-                                        ViewUtils.setViewAndChildrenVisibility(mouseTouchPadInteractiveViews, View.VISIBLE, fadeInAnimation);
+                                        ViewUtils.setViewAndChildrenVisibility(mouseTouchPadInteractiveViews, View.VISIBLE, application.getFadeInAnimation());
 
-                                        ViewUtils.setViewAndChildrenVisibility(keyboardInteractionContainer, View.GONE, fadeOutAnimation);
+                                        ViewUtils.setViewAndChildrenVisibility(keyboardInteractionContainer, View.GONE, application.getFadeOutAnimation());
                                     }
                                 }, 250);
                             }
@@ -771,7 +764,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements Serv
                     keyboardInteractionInitiated = true;
                 }
 
-                ViewUtils.setViewAndChildrenVisibility(keyboardInteractionContainer, View.VISIBLE, fadeInAnimation);
+                ViewUtils.setViewAndChildrenVisibility(keyboardInteractionContainer, View.VISIBLE, application.getFadeInAnimation());
 
                 // grab the focus and show the keyboard
                 characterDisplayView.requestFocus();
@@ -881,8 +874,22 @@ public class DeviceInteractionActivity extends AppCompatActivity implements Serv
             @Override
             public void onClick(View v)
             {
-                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-                intent.setType("*/*");
+
+                // This always works
+                Intent intent = new Intent(DeviceInteractionActivity.this, FilePickerActivity.class);
+                // This works if you defined the intent filter
+                // Intent i = new Intent(Intent.ACTION_GET_CONTENT);
+
+                // Set these depending on your use case. These are the defaults.
+                intent.putExtra(FilePickerActivity.EXTRA_ALLOW_MULTIPLE, false);
+                intent.putExtra(FilePickerActivity.EXTRA_ALLOW_CREATE_DIR, false);
+                intent.putExtra(FilePickerActivity.EXTRA_MODE, FilePickerActivity.MODE_FILE);
+
+                // Configure initial directory by specifying a String.
+                // You could specify a String like "/storage/emulated/0/", but that can
+                // dangerous. Always use Android's API calls to get paths to the SD-card or
+                // internal memory.
+                intent.putExtra(FilePickerActivity.EXTRA_START_PATH, Environment.getExternalStorageDirectory().getPath());
 
                 startActivityForResult(intent, REQUEST_FILE_PICKER);
             }
@@ -898,9 +905,9 @@ public class DeviceInteractionActivity extends AppCompatActivity implements Serv
             }
         });
 
-        this.systemVolumeSeekBar = (SeekBar) systemContainerView.findViewById(R.id.seekBar_systemVolume);
-        this.systemVolumeSeekBar.setProgress(Integer.valueOf(initialSyncData[1]));
-        this.systemVolumeSeekBarChangeListener = new SeekBar.OnSeekBarChangeListener()
+        systemVolumeSeekBar = (SeekBar) systemContainerView.findViewById(R.id.seekBar_systemVolume);
+        systemVolumeSeekBar.setProgress(Integer.valueOf(initialSyncData[1]));
+        systemVolumeSeekBarChangeListener = new SeekBar.OnSeekBarChangeListener()
         {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser)
@@ -923,16 +930,16 @@ public class DeviceInteractionActivity extends AppCompatActivity implements Serv
             {
             }
         };
-        this.systemVolumeSeekBar.setOnSeekBarChangeListener(systemVolumeSeekBarChangeListener);
+        systemVolumeSeekBar.setOnSeekBarChangeListener(systemVolumeSeekBarChangeListener);
 
-        this.muteButton = (ToggleButton) systemContainerView.findViewById(R.id.toggleButton_systemVolumeMute);
-        this.muteButton.setChecked(Boolean.valueOf(initialSyncData[0]));
-        this.muteButtonCheckedChangeListener = new ToggleButtonCheckedChangeListener();
-        this.muteButton.setOnCheckedChangeListener(muteButtonCheckedChangeListener);
+        muteButton = (ToggleButton) systemContainerView.findViewById(R.id.toggleButton_systemVolumeMute);
+        muteButton.setChecked(Boolean.valueOf(initialSyncData[0]));
+        muteButtonCheckedChangeListener = new ToggleButtonCheckedChangeListener();
+        muteButton.setOnCheckedChangeListener(muteButtonCheckedChangeListener);
         
-        this.screenBrightnessSeekBar = (SeekBar) systemContainerView.findViewById(R.id.seekBar_screenBrightness);
-        this.screenBrightnessSeekBar.setProgress(Integer.valueOf(initialSyncData[2]));
-        this.screenBrightnessSeekBarChangeListener = new SeekBar.OnSeekBarChangeListener()
+        screenBrightnessSeekBar = (SeekBar) systemContainerView.findViewById(R.id.seekBar_screenBrightness);
+        screenBrightnessSeekBar.setProgress(Integer.valueOf(initialSyncData[2]));
+        screenBrightnessSeekBarChangeListener = new SeekBar.OnSeekBarChangeListener()
         {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser)
@@ -954,7 +961,8 @@ public class DeviceInteractionActivity extends AppCompatActivity implements Serv
             {
             }
         };
-        this.screenBrightnessSeekBar.setOnSeekBarChangeListener(screenBrightnessSeekBarChangeListener);
+        screenBrightnessSeekBar.setOnSeekBarChangeListener(screenBrightnessSeekBarChangeListener);
+        fileSenderManager = new FileSenderManager(this);
     }
 
     private void initialiseVoiceInteractions()
@@ -978,9 +986,9 @@ public class DeviceInteractionActivity extends AppCompatActivity implements Serv
 
     private void setMuteButtonChecked(boolean isChecked)
     {
-        this.muteButton.setOnCheckedChangeListener(null);
-        this.muteButton.setChecked(isChecked);
-        this.muteButton.setOnCheckedChangeListener(this.muteButtonCheckedChangeListener);
+        muteButton.setOnCheckedChangeListener(null);
+        muteButton.setChecked(isChecked);
+        muteButton.setOnCheckedChangeListener(muteButtonCheckedChangeListener);
     }
 
     private final BroadcastReceiver batteryStateReceiver = new BroadcastReceiver()
@@ -1026,6 +1034,46 @@ public class DeviceInteractionActivity extends AppCompatActivity implements Serv
             }
         }
     };
+
+    @Override
+    public void onFileQueued(QueuedFile queuedFile)
+    {
+        JsonObject object = messageBuilder.getBaseObject();
+        object.addProperty(Constants.KEY_IDENTIFIER, Constants.KEY_FILE);
+        object.addProperty(Constants.KEY_ACTION, Constants.VALUE_BEGIN_FILE_TRANSFER);
+        object.addProperty(Constants.KEY_NAME, queuedFile.getFileName());
+        object.addProperty(Constants.KEY_TOTAL, queuedFile.getTotalBytes());
+        object.addProperty(Constants.KEY_CHECKSUM, queuedFile.getChecksum());
+
+        connectionService.write(messageBuilder.toJson(object));
+    }
+
+    @Override
+    public void onFileAccepted(QueuedFile queuedFile)
+    {
+        fileSenderManager.sendNextAvailable();
+    }
+
+    @Override
+    public void onFileSending(QueuedFile queuedFile, byte[] fileBytes, int remainingBytes)
+    {
+        JsonObject object = messageBuilder.getBaseObject();
+        object.addProperty(Constants.KEY_IDENTIFIER, Constants.KEY_FILE);
+        object.addProperty(Constants.KEY_ACTION, Constants.VALUE_FILE_SENDING);
+        object.addProperty(Constants.KEY_NAME, queuedFile.getFileName());
+        object.addProperty(Constants.KEY_CHECKSUM, queuedFile.getChecksum());
+        // object.addProperty(Constants.KEY_VALUE, new String(fileBytes));
+        object.addProperty(Constants.KEY_VALUE, Base64.encodeToString(fileBytes, Base64.DEFAULT));
+        object.addProperty(Constants.KEY_REMAINING, remainingBytes);
+
+        connectionService.write(messageBuilder.toJson(object));
+    }
+
+    @Override
+    public void onFileSendFinished(QueuedFile finishedFile)
+    {
+        SystemMessagingUtils.showShortToast(this, "'" + finishedFile.getFileName() +  "' sent to server!");
+    }
 
     protected class ToggleButtonCheckedChangeListener implements CompoundButton.OnCheckedChangeListener
     {

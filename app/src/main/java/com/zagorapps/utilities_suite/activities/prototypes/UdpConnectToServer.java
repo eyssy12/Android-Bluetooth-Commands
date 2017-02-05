@@ -48,7 +48,7 @@ public class UdpConnectToServer extends AppCompatActivity
                             {
                                 DatagramSocket clientSocket = new DatagramSocket();
                                 InetAddress IPAddress = InetAddress.getByName("192.168.1.1");
-                                byte[] sendData = new byte[512];
+                                byte[] sendData = new byte[4096];
                                 sendData = params[0].getBytes();
                                 DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, 30301);
 

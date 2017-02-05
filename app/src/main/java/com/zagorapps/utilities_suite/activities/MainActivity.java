@@ -28,7 +28,7 @@ import com.zagorapps.utilities_suite.R;
 import com.zagorapps.utilities_suite.activities.deviceinteraction.DeviceInteractionActivity;
 import com.zagorapps.utilities_suite.adapters.BluetoothDeviceAdapter;
 import com.zagorapps.utilities_suite.custom.EmptyRecyclerView;
-import com.zagorapps.utilities_suite.services.persistence.ClipboardManagerListenerService;
+import com.zagorapps.utilities_suite.services.persistence.ClipboardService;
 import com.zagorapps.utilities_suite.state.ComplexPreferences;
 import com.zagorapps.utilities_suite.state.models.BluetoothDeviceLite;
 import com.zagorapps.utilities_suite.state.models.BluetoothDevicesList;
@@ -192,7 +192,7 @@ public class MainActivity extends AppCompatActivity
 
     private void prepareServices()
     {
-        Intent startServiceIntent = new Intent(this, ClipboardManagerListenerService.class);
+        Intent startServiceIntent = new Intent(getApplicationContext(), ClipboardService.class);
         startService(startServiceIntent);
     }
 

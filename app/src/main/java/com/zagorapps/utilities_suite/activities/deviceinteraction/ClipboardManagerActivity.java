@@ -23,7 +23,7 @@ import com.zagorapps.utilities_suite.handlers.ServerMessageHandler;
 import com.zagorapps.utilities_suite.interfaces.ServerMessagingListener;
 import com.zagorapps.utilities_suite.protocol.Constants;
 import com.zagorapps.utilities_suite.protocol.MessageBuilder;
-import com.zagorapps.utilities_suite.services.net.ServerConnectionService;
+import com.zagorapps.utilities_suite.services.net.ConnectionService;
 import com.zagorapps.utilities_suite.state.ComplexPreferences;
 import com.zagorapps.utilities_suite.state.models.ClipboardData;
 import com.zagorapps.utilities_suite.state.models.ClipboardDataList;
@@ -35,7 +35,7 @@ public class ClipboardManagerActivity extends AppCompatActivity implements Serve
 {
     private ComplexPreferences complexPreferences;
     private ServerMessageHandler messageHandler;
-    private ServerConnectionService connectionService;
+    private ConnectionService connectionService;
     private MessageBuilder messageBuilder;
 
     private EmptyRecyclerView emptyRecyclerView;
@@ -95,7 +95,7 @@ public class ClipboardManagerActivity extends AppCompatActivity implements Serve
     {
         messageHandler = new ServerMessageHandler(this, this);
 
-        Intent intent = new Intent(this, ServerConnectionService.class);
+        Intent intent = new Intent(this, ConnectionService.class);
         bindService(intent, binderService, Context.BIND_AUTO_CREATE);
     }
 
@@ -104,7 +104,7 @@ public class ClipboardManagerActivity extends AppCompatActivity implements Serve
         @Override
         public void onServiceConnected(ComponentName className, IBinder service)
         {
-            ServerConnectionService.ServerConnectionBinder binder = (ServerConnectionService.ServerConnectionBinder) service;
+            ConnectionService.ServerConnectionBinder binder = (ConnectionService.ServerConnectionBinder) service;
 
             connectionService = binder.getService();
             connectionService.subscribe(messageHandler);
@@ -160,7 +160,6 @@ public class ClipboardManagerActivity extends AppCompatActivity implements Serve
             json.addProperty(Constants.KEY_IDENTIFIER, "TESTID"); // TODO: implement server side logic
 
             JsonArray array = new JsonArray();
-
 
             for (ClipboardData clipboard : items)
             {

@@ -5,7 +5,7 @@ import android.os.Message;
 import android.support.annotation.NonNull;
 
 import com.zagorapps.utilities_suite.interfaces.ServerMessagingListener;
-import com.zagorapps.utilities_suite.threading.BluetoothConnectionThread;
+import com.zagorapps.utilities_suite.net.BluetoothConnectionThread;
 
 /**
  * Created by eyssy on 01/09/2016.
