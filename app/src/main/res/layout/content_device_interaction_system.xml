@@ -8,9 +8,10 @@
     <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
                   android:orientation="vertical"
                   android:layout_width="match_parent"
-                  android:layout_height="match_parent">
+                  android:layout_height="wrap_content">
 
         <android.support.v7.widget.CardView
+            android:id="@+id/card_commands"
             android:padding="8dp"
             android:layout_marginBottom="16dp"
             android:layout_width="match_parent"
@@ -65,20 +66,20 @@
 
                 </LinearLayout>
             </LinearLayout>
-
         </android.support.v7.widget.CardView>
         <android.support.v7.widget.CardView
+            android:id="@+id/card_volume"
             android:padding="8dp"
             android:layout_marginBottom="16dp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
 
-            <LinearLayout
+            <RelativeLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
+                android:layout_height="match_parent">
 
                 <TextView
+                    android:id="@+id/label_volume"
                     android:layout_margin="8dp"
                     android:text="Volume Control"
                     android:textAlignment="center"
@@ -87,35 +88,37 @@
                     android:layout_height="wrap_content" />
 
                 <SeekBar
+                    android:id="@+id/seekBar_systemVolume"
+                    android:layout_below="@id/label_volume"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:id="@+id/seekBar_systemVolume"
                     android:padding="16dp"
                     android:max="100" />
 
                 <ToggleButton
+                    android:id="@+id/toggleButton_systemVolumeMute"
+                    android:layout_below="@id/seekBar_systemVolume"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:id="@+id/toggleButton_systemVolumeMute"
                     android:layout_margin="8dp"
                     android:textOn="Unmute"
                     android:textOff="Mute" />
 
-            </LinearLayout>
-
+            </RelativeLayout>
         </android.support.v7.widget.CardView>
         <android.support.v7.widget.CardView
+            android:id="@+id/card_brightness"
             android:padding="8dp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp">
 
-            <LinearLayout
+            <RelativeLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
+                android:layout_height="wrap_content">
 
                 <TextView
+                    android:id="@+id/label_screenBrightness"
                     android:layout_margin="8dp"
                     android:text="Screen Brightness"
                     android:textAlignment="center"
@@ -124,17 +127,18 @@
                     android:layout_height="wrap_content" />
 
                 <SeekBar
+                    android:id="@+id/seekBar_screenBrightness"
+                    android:layout_below="@id/label_screenBrightness"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:id="@+id/seekBar_screenBrightness"
                     android:padding="16dp"
                     android:max="100"/>
 
-            </LinearLayout>
+            </RelativeLayout>
 
         </android.support.v7.widget.CardView>
-
         <android.support.v7.widget.CardView
+            android:id="@+id/card_file_sender"
             android:padding="8dp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -149,8 +153,8 @@
             </Button>
 
         </android.support.v7.widget.CardView>
-
         <android.support.v7.widget.CardView
+            android:id="@+id/card_clipboard"
             android:padding="8dp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -167,6 +171,5 @@
         </android.support.v7.widget.CardView>
 
     </LinearLayout>
-
 </ScrollView>
 
