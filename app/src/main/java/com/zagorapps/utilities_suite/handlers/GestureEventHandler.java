@@ -11,7 +11,7 @@ import android.view.GestureDetector;
 import android.view.MotionEvent;
 
 import com.google.gson.JsonObject;
-import com.zagorapps.utilities_suite.enumerations.Coordinate;
+import com.zagorapps.utilities_suite.Enumerations.Coordinate;
 import com.zagorapps.utilities_suite.interfaces.SimpleHandler;
 import com.zagorapps.utilities_suite.protocol.ClientCommands;
 import com.zagorapps.utilities_suite.protocol.Constants;

@@ -1,6 +1,6 @@
 package com.zagorapps.utilities_suite.state.models;
 
-import com.zagorapps.utilities_suite.enumerations.Coordinate;
+import com.zagorapps.utilities_suite.Enumerations.Coordinate;
 
 import java.math.BigDecimal;
 

@@ -5,7 +5,7 @@ import android.os.Message;
 import android.support.annotation.NonNull;
 import android.util.SparseArray;
 
-import com.zagorapps.utilities_suite.enumerations.ConnectionState;
+import com.zagorapps.utilities_suite.Enumerations.ConnectionState;
 import com.zagorapps.utilities_suite.handlers.HandlerBase;
 import com.zagorapps.utilities_suite.state.models.BluetoothDeviceLite;
 import com.zagorapps.utilities_suite.utils.data.CollectionUtils;
@@ -142,7 +142,7 @@ public class BluetoothConnectionThread extends Thread
     {
         byte[] header;
 
-        if (payload.length <= 2048)
+        if (payload.length <= 4096)
         {
             header = CollectionUtils.padBytes(StringUtils.getBytesForCharset(String.valueOf(payload.length), StringUtils.CHARSET_UTF_8), 4);
         }
@@ -161,7 +161,7 @@ public class BluetoothConnectionThread extends Thread
         byte[] payloadBytes = StringUtils.getBytesForCharset(payload, StringUtils.CHARSET_UTF_8);
         byte[] header;
 
-        if (payloadBytes.length <= 2048)
+        if (payloadBytes.length <= 4096)
         {
             header = CollectionUtils.padBytes(StringUtils.getBytesForCharset(String.valueOf(payloadBytes.length), StringUtils.CHARSET_UTF_8), 4);
         }

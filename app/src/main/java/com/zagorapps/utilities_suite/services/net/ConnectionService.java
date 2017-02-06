@@ -8,8 +8,8 @@ import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
+import com.zagorapps.utilities_suite.Enumerations.ConnectionState;
 import com.zagorapps.utilities_suite.activities.deviceinteraction.DeviceInteractionActivity;
-import com.zagorapps.utilities_suite.enumerations.ConnectionState;
 import com.zagorapps.utilities_suite.handlers.ServerMessageHandler;
 import com.zagorapps.utilities_suite.net.BluetoothConnectionThread;
 import com.zagorapps.utilities_suite.state.models.BluetoothDeviceLite;

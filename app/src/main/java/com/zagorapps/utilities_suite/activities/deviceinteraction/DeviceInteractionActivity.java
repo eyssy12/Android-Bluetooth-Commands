@@ -64,6 +64,7 @@ import com.zagorapps.utilities_suite.services.HeadConnectionService;
 import com.zagorapps.utilities_suite.services.net.ConnectionService;
 import com.zagorapps.utilities_suite.state.InteractionTab;
 import com.zagorapps.utilities_suite.state.models.TabPageMetadata;
+import com.zagorapps.utilities_suite.utils.data.CollectionUtils;
 import com.zagorapps.utilities_suite.utils.data.NumberUtils;
 import com.zagorapps.utilities_suite.utils.threading.RunnableUtils;
 import com.zagorapps.utilities_suite.utils.view.ActivityUtils;
@@ -265,7 +266,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements Serv
 
                 SystemMessagingUtils.showToast(this, "Please click BACK again to exit", Toast.LENGTH_SHORT);
 
-                RunnableUtils.ExecuteWithDelay(new Runnable()
+                RunnableUtils.executeWithDelay(new Runnable()
                 {
                     @Override
                     public void run()
@@ -366,11 +367,11 @@ public class DeviceInteractionActivity extends AppCompatActivity implements Serv
 
                 if (responseKey.equals("readyForSending"))
                 {
-                    fileSenderManager.beginSendQueuedFile();
+                    fileSenderManager.beginQueuedFileSend();
                 }
                 else if (responseKey.equals("chunkAccepted"))
                 {
-                    fileSenderManager.sendNextAvailable();
+                    fileSenderManager.prepareNextAvailable();
                 }
                 else if (responseKey.equals("finished"))
                 {
@@ -481,32 +482,15 @@ public class DeviceInteractionActivity extends AppCompatActivity implements Serv
         {
             if (resultCode == RESULT_OK)
             {
-                if (data.getExtras() == null || data.getBooleanExtra(FilePickerActivity.EXTRA_ALLOW_MULTIPLE, false))
-                {
-                    // The URI will now be something like content://PACKAGE-NAME/root/path/to/file
-                    Uri uri = data.getData();
-                    // A utility method is provided to transform the URI to a File object
-                    File file = com.nononsenseapps.filepicker.Utils.getFileForUri(uri);
+                ArrayList<String> paths = data.getStringArrayListExtra(FilePickerActivity.EXTRA_PATHS);
 
-                    QueuedFile queuedFile = new QueuedFile(file);
-
-                    fileSenderManager.enqueue(file);
-                }
-                else
+                if (!CollectionUtils.isEmpty(paths))
                 {
-                    // Handling multiple results is one extra step
-                    ArrayList<String> paths = data.getStringArrayListExtra(FilePickerActivity.EXTRA_PATHS);
-                    if (paths != null)
+                    for (String path : paths)
                     {
-                        for (String path: paths)
-                        {
-                            Uri uri = Uri.parse(path);
-                            // Do something with the URI
-                            File file = com.nononsenseapps.filepicker.Utils.getFileForUri(uri);
-                            // If you want a URI which matches the old return value, you can do
-                            Uri fileUri = Uri.fromFile(file);
-                            // Do something with the result...
-                        }
+                        File file = com.nononsenseapps.filepicker.Utils.getFileForUri(Uri.parse(path));
+
+                        fileSenderManager.enqueue(file);
                     }
                 }
             }
@@ -701,7 +685,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements Serv
                             if (event.getKeyCode() == KeyEvent.KEYCODE_BACK)
                             {
                                 // the Soft keyboard has a delay when it is disposed hence it doesnt look as nice when the other views get rendered before it
-                                RunnableUtils.ExecuteWithDelay(new Runnable()
+                                RunnableUtils.executeWithDelay(new Runnable()
                                 {
                                     @Override
                                     public void run()
@@ -802,6 +786,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements Serv
 
     private void initialiseSpecialKeyboardInteractions()
     {
+        // TODO: add special keys here F1-12
         View keyboardContainerView = tabbedViewPager.getTabbedAdapter().getViewByInteractionTab(InteractionTab.KEYBOARD);
     }
 
@@ -881,7 +866,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements Serv
                 // Intent i = new Intent(Intent.ACTION_GET_CONTENT);
 
                 // Set these depending on your use case. These are the defaults.
-                intent.putExtra(FilePickerActivity.EXTRA_ALLOW_MULTIPLE, false);
+                intent.putExtra(FilePickerActivity.EXTRA_ALLOW_MULTIPLE, true);
                 intent.putExtra(FilePickerActivity.EXTRA_ALLOW_CREATE_DIR, false);
                 intent.putExtra(FilePickerActivity.EXTRA_MODE, FilePickerActivity.MODE_FILE);
 
@@ -1051,7 +1036,7 @@ public class DeviceInteractionActivity extends AppCompatActivity implements Serv
     @Override
     public void onFileAccepted(QueuedFile queuedFile)
     {
-        fileSenderManager.sendNextAvailable();
+        fileSenderManager.prepareNextAvailable();
     }
 
     @Override
@@ -1062,7 +1047,6 @@ public class DeviceInteractionActivity extends AppCompatActivity implements Serv
         object.addProperty(Constants.KEY_ACTION, Constants.VALUE_FILE_SENDING);
         object.addProperty(Constants.KEY_NAME, queuedFile.getFileName());
         object.addProperty(Constants.KEY_CHECKSUM, queuedFile.getChecksum());
-        // object.addProperty(Constants.KEY_VALUE, new String(fileBytes));
         object.addProperty(Constants.KEY_VALUE, Base64.encodeToString(fileBytes, Base64.DEFAULT));
         object.addProperty(Constants.KEY_REMAINING, remainingBytes);
 
@@ -1072,7 +1056,11 @@ public class DeviceInteractionActivity extends AppCompatActivity implements Serv
     @Override
     public void onFileSendFinished(QueuedFile finishedFile)
     {
-        SystemMessagingUtils.showShortToast(this, "'" + finishedFile.getFileName() +  "' sent to server!");
+        // TODO: figure out why this may be null at times (possible cause is the senderHaltedDetector)
+        if (finishedFile != null)
+        {
+            SystemMessagingUtils.showShortToast(this, "'" + finishedFile.getFileName() +  "' sent to server!");
+        }
     }
 
     protected class ToggleButtonCheckedChangeListener implements CompoundButton.OnCheckedChangeListener
