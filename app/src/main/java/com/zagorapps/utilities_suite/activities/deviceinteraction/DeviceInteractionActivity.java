@@ -1,5 +1,6 @@
 package com.zagorapps.utilities_suite.activities.deviceinteraction;
 
+import android.app.NotificationManager;
 import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -21,6 +22,7 @@ import android.support.v4.util.Pair;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.app.NotificationCompat;
 import android.support.v7.widget.Toolbar;
 import android.util.Base64;
 import android.view.KeyEvent;
@@ -84,6 +86,8 @@ public class DeviceInteractionActivity extends AppCompatActivity implements Serv
         REQUEST_FILE_PICKER = REQUEST_INTERACTION_SETTINGS + 1,
         REQUEST_CLIPBOARD_MANAGER = REQUEST_FILE_PICKER + 1;
 
+    private static final int ID_FILE_SEND_NOTIFICATION = 100;
+
     private static final float DEFAULT_MOUSE_SENSITIVITY = (float) 1.1;
 
     private static UUID SERVER_ENDPOINT = UUID.fromString("1f1aa577-32d6-4c59-b9a2-f262994783e9");
@@ -129,6 +133,8 @@ public class DeviceInteractionActivity extends AppCompatActivity implements Serv
 
     // Specifics
     private UtilitiesSuiteApplication application;
+    private NotificationManager notifyManager;
+    private NotificationCompat.Builder fileSendNotificationBuilder;
 
     private ServerMessageHandler messageHandler;
     private GestureEventHandler gestureHandler;
@@ -510,6 +516,12 @@ public class DeviceInteractionActivity extends AppCompatActivity implements Serv
     private void prepareStatics()
     {
         application = (UtilitiesSuiteApplication) getApplicationContext();
+        notifyManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+
+        fileSendNotificationBuilder = new NotificationCompat.Builder(this);
+        fileSendNotificationBuilder.setContentTitle("File upload")
+                .setContentText("Upload in progress")
+                .setSmallIcon(R.drawable.ic_file_upload);
 
         messageBuilder = MessageBuilder.DefaultInstance();
 
@@ -1036,12 +1048,20 @@ public class DeviceInteractionActivity extends AppCompatActivity implements Serv
     @Override
     public void onFileAccepted(QueuedFile queuedFile)
     {
+        fileSendNotificationBuilder.setProgress(100, 0, false);
+
+        // Displays the progress bar for the first time.
+        notifyManager.notify(DeviceInteractionActivity.ID_FILE_SEND_NOTIFICATION, fileSendNotificationBuilder.build());
+
         fileSenderManager.prepareNextAvailable();
     }
 
     @Override
-    public void onFileSending(QueuedFile queuedFile, byte[] fileBytes, int remainingBytes)
+    public void onFileSending(QueuedFile queuedFile, byte[] fileBytes, int remainingBytes, int progress)
     {
+        fileSendNotificationBuilder.setProgress(100, progress, false);
+        notifyManager.notify(DeviceInteractionActivity.ID_FILE_SEND_NOTIFICATION, fileSendNotificationBuilder.build());
+
         JsonObject object = messageBuilder.getBaseObject();
         object.addProperty(Constants.KEY_IDENTIFIER, Constants.KEY_FILE);
         object.addProperty(Constants.KEY_ACTION, Constants.VALUE_FILE_SENDING);
@@ -1056,10 +1076,14 @@ public class DeviceInteractionActivity extends AppCompatActivity implements Serv
     @Override
     public void onFileSendFinished(QueuedFile finishedFile)
     {
-        // TODO: figure out why this may be null at times (possible cause is the senderHaltedDetector)
         if (finishedFile != null)
         {
-            SystemMessagingUtils.showShortToast(this, "'" + finishedFile.getFileName() +  "' sent to server!");
+            fileSendNotificationBuilder
+                    .setContentText("File upload complete!")
+                    // Removes the progress bar
+                    .setProgress(0, 0, false);
+
+            notifyManager.notify(DeviceInteractionActivity.ID_FILE_SEND_NOTIFICATION, fileSendNotificationBuilder.build());
         }
     }
 

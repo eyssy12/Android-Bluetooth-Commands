@@ -142,7 +142,7 @@ public class BluetoothConnectionThread extends Thread
     {
         byte[] header;
 
-        if (payload.length <= 4096)
+        if (payload.length <= 8192)
         {
             header = CollectionUtils.padBytes(StringUtils.getBytesForCharset(String.valueOf(payload.length), StringUtils.CHARSET_UTF_8), 4);
         }
@@ -161,7 +161,7 @@ public class BluetoothConnectionThread extends Thread
         byte[] payloadBytes = StringUtils.getBytesForCharset(payload, StringUtils.CHARSET_UTF_8);
         byte[] header;
 
-        if (payloadBytes.length <= 4096)
+        if (payloadBytes.length <= 8192)
         {
             header = CollectionUtils.padBytes(StringUtils.getBytesForCharset(String.valueOf(payloadBytes.length), StringUtils.CHARSET_UTF_8), 4);
         }

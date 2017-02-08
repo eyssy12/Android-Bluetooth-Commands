@@ -130,9 +130,13 @@ public class FileSenderManager
                     fileBytes = new byte[4096];
                 }
 
+                long totalBytes = fileQueue.peek().getTotalBytes();
+                double division = ((double)totalBytes - (double)remainingBytes) / (double)totalBytes;
+                int progress = (int)(division * 100);
+
                 remainingBytes -= queuedFileStream.read(fileBytes);
 
-                listener.onFileSending(fileQueue.peek(), fileBytes, remainingBytes);
+                listener.onFileSending(fileQueue.peek(), fileBytes, remainingBytes, progress);
 
                 // we want to cancel the current runnable because our sender is not halted by this stage
                 invalidateRestarter();

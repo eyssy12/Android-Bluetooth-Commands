@@ -10,6 +10,6 @@ public interface FileSenderListener
 {
     void onFileQueued(QueuedFile queuedFile);
     void onFileAccepted(QueuedFile queuedFile);
-    void onFileSending(QueuedFile queuedFile, byte[] fileBytes, int remainingBytes);
+    void onFileSending(QueuedFile queuedFile, byte[] fileBytes, int remaining, int progress);
     void onFileSendFinished(QueuedFile finishedFile);
 }
